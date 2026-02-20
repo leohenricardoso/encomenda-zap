@@ -18,10 +18,12 @@ model Store {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admin Admin?
+  admin    Admin?
+  products Product[]
 
   @@map("stores")
 }
+
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 // Store owner — the authenticated user of the platform.
@@ -37,4 +39,23 @@ model Admin {
   store Store @relation(fields: [storeId], references: [id])
 
   @@map("admins")
+}
+
+// ─── Product ──────────────────────────────────────────────────────────────────
+// A product offered by a Store in its catalog.
+
+model Product {
+  id          String   @id @default(uuid())
+  storeId     String
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id])
+
+  @@index([storeId])
+  @@map("products")
 }
