@@ -5,3 +5,36 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ─── Store ────────────────────────────────────────────────────────────────────
+// Represents a business (tenant) using the platform.
+// Each Store will own its products, orders and customers.
+
+model Store {
+  id        String   @id @default(uuid())
+  name      String
+  whatsapp  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admin Admin?
+
+  @@map("stores")
+}
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+// Store owner — the authenticated user of the platform.
+// One Admin belongs to exactly one Store (1:1 for MVP).
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  storeId      String   @unique
+  createdAt    DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id])
+
+  @@map("admins")
+}
