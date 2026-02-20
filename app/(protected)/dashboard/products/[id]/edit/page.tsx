@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
-import { getProductById } from "@/domain/product/useCases/getProductById";
+import { getProductByIdUseCase } from "@/infra/composition";
 import { ProductForm } from "../../_components/ProductForm";
 
 export const metadata = { title: "Editar Produto" };
@@ -16,7 +16,7 @@ export default async function EditProductPage({ params }: Props) {
 
   let product;
   try {
-    product = await getProductById(id, session.storeId);
+    product = await getProductByIdUseCase.execute(id, session.storeId);
   } catch {
     notFound();
   }

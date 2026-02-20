@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
-import { listProducts } from "@/domain/product/useCases/listProducts";
+import { listProductsUseCase } from "@/infra/composition";
 import ProductsTable from "./_components/ProductsTable";
 
 interface Props {
@@ -22,7 +22,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   // Future: use page/perPage from searchParams for cursor-based pagination
   await searchParams; // resolve the Promise (Next.js 15 dynamic API)
 
-  const products = await listProducts(session.storeId);
+  const products = await listProductsUseCase.execute(session.storeId);
 
   return (
     <main>

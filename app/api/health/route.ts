@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/infra/prisma";
 import { ok, errorResponse, HttpStatus } from "@/shared/http";
 
 /**

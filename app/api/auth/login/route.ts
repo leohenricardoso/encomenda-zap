@@ -1,3 +1,3 @@
-import { loginController } from "@/infra/http/controllers/loginController";
+import { authController } from "@/infra/composition";
 
-export const POST = loginController;
+export const POST = authController.login;

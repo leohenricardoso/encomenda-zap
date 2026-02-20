@@ -1,3 +1,3 @@
-import { registerController } from "@/infra/http/controllers/registerController";
+import { authController } from "@/infra/composition";
 
-export const POST = registerController;
+export const POST = authController.register;
