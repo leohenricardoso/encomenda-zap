@@ -3,6 +3,7 @@ import { HttpStatus } from "@/shared/http/statuses";
 import type { IStoreRepository } from "@/domain/store/IStoreRepository";
 import type { IPasswordHasher } from "@/application/ports/IPasswordHasher";
 import type { CreateStoreOutput } from "@/domain/store/types";
+import { slugify } from "@/shared/utils/slugify";
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ export class RegisterStoreUseCase {
     // Repository is responsible for translating infra errors (P2002) to AppError.
     return this.storeRepo.createWithAdmin({
       name: input.name.trim(),
+      slug: slugify(input.name),
       whatsapp: input.whatsapp.trim(),
       adminEmail: input.adminEmail.trim().toLowerCase(),
       passwordHash,

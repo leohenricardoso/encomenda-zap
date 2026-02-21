@@ -13,6 +13,8 @@ datasource db {
 model Store {
   id        String   @id @default(uuid())
   name      String
+  /// URL-safe identifier used in the public catalog: /catalog/:slug
+  slug      String?  @unique
   whatsapp  String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -21,6 +23,7 @@ model Store {
   admin    Admin?
   products Product[]
 
+  @@index([slug])
   @@map("stores")
 }
 

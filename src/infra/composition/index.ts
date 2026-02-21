@@ -32,6 +32,7 @@ import { Argon2PasswordHasher } from "@/infra/security/Argon2PasswordHasher";
 import { PrismaAdminRepository } from "@/infra/repositories/PrismaAdminRepository";
 import { PrismaStoreRepository } from "@/infra/repositories/PrismaStoreRepository";
 import { PrismaProductRepository } from "@/infra/repositories/PrismaProductRepository";
+import { PrismaCatalogRepository } from "@/infra/repositories/PrismaCatalogRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ import { DeleteProductUseCase } from "@/application/product/DeleteProductUseCase
 import { CreateVariantUseCase } from "@/application/product/CreateVariantUseCase";
 import { UpdateVariantUseCase } from "@/application/product/UpdateVariantUseCase";
 import { DeleteVariantUseCase } from "@/application/product/DeleteVariantUseCase";
+import { GetStoreCatalogUseCase } from "@/application/catalog/GetStoreCatalogUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ const hasher = new Argon2PasswordHasher();
 const adminRepo = new PrismaAdminRepository();
 const storeRepo = new PrismaStoreRepository();
 const productRepo = new PrismaProductRepository();
+const catalogRepo = new PrismaCatalogRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
@@ -97,4 +100,6 @@ export const productVariantController = new ProductVariantController(
 /**
  * Use case singletons — available for direct use in Server Components.
  */
+export const getStoreCatalogUseCase = new GetStoreCatalogUseCase(catalogRepo);
+
 export { listProductsUseCase, getProductByIdUseCase };

@@ -8,6 +8,8 @@ import type { CreateStoreOutput } from "./types";
 
 export interface CreateStoreWithAdminInput {
   name: string;
+  /** URL-safe slug for the public catalog URL: /catalog/:slug */
+  slug: string;
   whatsapp: string;
   adminEmail: string;
   /** Pre-hashed password — raw password must NEVER reach the repository. */

@@ -31,7 +31,7 @@ export class PrismaStoreRepository implements IStoreRepository {
     try {
       return await prisma.$transaction(async (tx) => {
         const store = await tx.store.create({
-          data: { name: data.name, whatsapp: data.whatsapp },
+          data: { name: data.name, slug: data.slug, whatsapp: data.whatsapp },
           select: { id: true },
         });
 
