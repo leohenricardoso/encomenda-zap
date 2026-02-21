@@ -19,8 +19,10 @@ import { DeleteProductButton } from "./DeleteProductButton";
 export interface ProductCardProps {
   id: string;
   name: string;
-  /** Plain number, e.g. 29.9 */
-  price: number;
+  /** null when product uses variant pricing */
+  price: number | null;
+  /** Number of variants; shown only when price is null */
+  variantCount?: number;
   isActive: boolean;
   /** Optional; placeholder shown when absent */
   imageUrl?: string | null;
@@ -67,6 +69,7 @@ export function ProductCard({
   id,
   name,
   price,
+  variantCount,
   isActive,
   imageUrl,
 }: ProductCardProps) {
@@ -109,7 +112,9 @@ export function ProductCard({
             {name}
           </h3>
           <p className="mt-0.5 text-base font-medium text-[rgb(var(--color-text))]">
-            {formatPrice(price)}
+            {price !== null
+              ? formatPrice(price)
+              : `${variantCount ?? 0} varia${(variantCount ?? 0) !== 1 ? "ções" : "ção"}`}
           </p>
         </div>
 

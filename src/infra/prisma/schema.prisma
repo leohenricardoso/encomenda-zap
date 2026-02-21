@@ -41,21 +41,65 @@ model Admin {
   @@map("admins")
 }
 
+// ─── PricingType ──────────────────────────────────────────────────────────────
+// How a variant (or simple product) is priced.
+
+enum PricingType {
+  UNIT    // sold by piece
+  WEIGHT  // sold by weight (e.g. kg, g)
+}
+
 // ─── Product ──────────────────────────────────────────────────────────────────
-// A product offered by a Store in its catalog.
+// Conceptual item offered by a Store (e.g. "Bolo de Chocolate").
+//
+// price:       nullable — null means pricing is delegated to variants.
+//              Kept for backward-compat with existing simple products.
+// minQuantity: minimum order quantity enforced at checkout.
 
 model Product {
   id          String   @id @default(uuid())
   storeId     String
   name        String
   description String?
-  price       Decimal  @db.Decimal(10, 2)
+  /// Base price for simple products. NULL when using variants.
+  price       Decimal? @db.Decimal(10, 2)
+  /// Minimum units a customer must order (default 1)
+  minQuantity Int      @default(1)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  store Store @relation(fields: [storeId], references: [id])
+  store    Store            @relation(fields: [storeId], references: [id])
+  variants ProductVariant[]
 
   @@index([storeId])
   @@map("products")
+}
+
+// ─── ProductVariant ───────────────────────────────────────────────────────────
+// A purchasable option of a Product (e.g. "500g – R$ 29,90").
+//
+// storeId is denormalised from the parent Product so variants can be queried
+// with a single WHERE storeId = ? without a join — enforces multi-tenancy.
+
+model ProductVariant {
+  id          String      @id @default(uuid())
+  productId   String
+  /// Denormalised from Product — enables tenant-scoped queries on variants alone.
+  storeId     String
+  /// Human-readable option label ("P", "M", "G" / "Chocolate" / "500g").
+  label       String
+  price       Decimal     @db.Decimal(10, 2)
+  pricingType PricingType @default(UNIT)
+  isActive    Boolean     @default(true)
+  /// Display order within the product's variant list (lower = first).
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([storeId])
+  @@map("product_variants")
 }

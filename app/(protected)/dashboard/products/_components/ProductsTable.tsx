@@ -39,7 +39,7 @@ export default function ProductsTable({ products }: Props) {
         {products.map((product) => (
           <tr key={product.id}>
             <td>{product.name}</td>
-            <td>{formatPrice(product.price)}</td>
+            <td>{product.price != null ? formatPrice(product.price) : "—"}</td>
             <td>
               <span aria-label={product.isActive ? "Active" : "Inactive"}>
                 {product.isActive ? "Active" : "Inactive"}

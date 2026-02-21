@@ -42,11 +42,15 @@ import { ListProductsUseCase } from "@/application/product/ListProductsUseCase";
 import { GetProductByIdUseCase } from "@/application/product/GetProductByIdUseCase";
 import { UpdateProductUseCase } from "@/application/product/UpdateProductUseCase";
 import { DeleteProductUseCase } from "@/application/product/DeleteProductUseCase";
+import { CreateVariantUseCase } from "@/application/product/CreateVariantUseCase";
+import { UpdateVariantUseCase } from "@/application/product/UpdateVariantUseCase";
+import { DeleteVariantUseCase } from "@/application/product/DeleteVariantUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 import { AuthController } from "@/controllers/http/AuthController";
 import { ProductController } from "@/controllers/http/ProductController";
+import { ProductVariantController } from "@/controllers/http/ProductVariantController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -65,6 +69,9 @@ const listProductsUseCase = new ListProductsUseCase(productRepo);
 const getProductByIdUseCase = new GetProductByIdUseCase(productRepo);
 const updateProductUseCase = new UpdateProductUseCase(productRepo);
 const deleteProductUseCase = new DeleteProductUseCase(productRepo);
+const createVariantUseCase = new CreateVariantUseCase(productRepo);
+const updateVariantUseCase = new UpdateVariantUseCase(productRepo);
+const deleteVariantUseCase = new DeleteVariantUseCase(productRepo);
 
 // ─── Exported singletons (imported by route handlers) ────────────────────────
 
@@ -81,11 +88,13 @@ export const productController = new ProductController(
   deleteProductUseCase,
 );
 
+export const productVariantController = new ProductVariantController(
+  createVariantUseCase,
+  updateVariantUseCase,
+  deleteVariantUseCase,
+);
+
 /**
  * Use case singletons — available for direct use in Server Components.
- *
- * Server Components are view-layer adapters: they call use cases directly
- * (no HTTP round-trip). Importing these from the composition root keeps the
- * wiring in one place and avoids recreating instances per render.
  */
 export { listProductsUseCase, getProductByIdUseCase };

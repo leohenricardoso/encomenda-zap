@@ -44,7 +44,8 @@ export class ProductController {
   readonly create = withAuth(
     async (req: AuthenticatedRequest): Promise<NextResponse> => {
       const body = await this.parseJsonBody(req);
-      const { name, description, price, isActive } = body;
+      const { name, description, price, isActive, minQuantity, variants } =
+        body;
 
       try {
         const product = await this.createProductUseCase.execute({
@@ -52,8 +53,22 @@ export class ProductController {
           name: String(name ?? ""),
           description:
             description !== undefined ? String(description) : undefined,
-          price: Number(price),
+          price: price !== undefined ? Number(price) : undefined,
           isActive: isActive !== undefined ? Boolean(isActive) : true,
+          minQuantity:
+            minQuantity !== undefined ? Number(minQuantity) : undefined,
+          variants: Array.isArray(variants)
+            ? variants.map((v: Record<string, unknown>) => ({
+                label: String(v.label ?? ""),
+                price: Number(v.price),
+                pricingType:
+                  v.pricingType === "WEIGHT"
+                    ? ("WEIGHT" as const)
+                    : ("UNIT" as const),
+                isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
+                sortOrder: v.sortOrder !== undefined ? Number(v.sortOrder) : 0,
+              }))
+            : [],
         });
         return created(product);
       } catch (err) {
@@ -112,7 +127,8 @@ export class ProductController {
     ): Promise<NextResponse> => {
       const id = await this.extractId(args);
       const body = await this.parseJsonBody(req);
-      const { name, description, price, isActive } = body;
+      const { name, description, price, isActive, minQuantity, variants } =
+        body;
 
       try {
         const product = await this.updateProductUseCase.execute(
@@ -123,8 +139,31 @@ export class ProductController {
             ...(description !== undefined && {
               description: String(description),
             }),
-            ...(price !== undefined && { price: Number(price) }),
+            // price === null explicitly switches to variant-pricing mode
+            ...(price !== undefined && {
+              price: price === null ? null : Number(price),
+            }),
             ...(isActive !== undefined && { isActive: Boolean(isActive) }),
+            ...(minQuantity !== undefined && {
+              minQuantity: Number(minQuantity),
+            }),
+            // variants: replace all existing variants when provided
+            ...(Array.isArray(variants) && {
+              variants: variants.map(
+                (v: Record<string, unknown>, i: number) => ({
+                  label: String(v.label ?? ""),
+                  price: Number(v.price),
+                  pricingType:
+                    v.pricingType === "WEIGHT"
+                      ? ("WEIGHT" as const)
+                      : ("UNIT" as const),
+                  isActive:
+                    v.isActive !== undefined ? Boolean(v.isActive) : true,
+                  sortOrder:
+                    v.sortOrder !== undefined ? Number(v.sortOrder) : i,
+                }),
+              ),
+            }),
           },
         );
         return ok(product);

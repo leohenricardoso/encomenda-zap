@@ -71,6 +71,10 @@ function applyFilters(
       return dir * a.name.localeCompare(b.name, "pt-BR");
     }
     if (sortField === "price") {
+      // nulls (variant-pricing mode) sort after products with a fixed price
+      if (a.price === null && b.price === null) return 0;
+      if (a.price === null) return dir;
+      if (b.price === null) return -dir;
       return dir * (a.price - b.price);
     }
     // createdAt
@@ -183,6 +187,7 @@ export default async function ProductsPage({ searchParams }: Props) {
               id={product.id}
               name={product.name}
               price={product.price}
+              variantCount={product.variants.length}
               isActive={product.isActive}
             />
           ))

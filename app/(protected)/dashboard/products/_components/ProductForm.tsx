@@ -3,25 +3,49 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type PricingType = "UNIT" | "WEIGHT";
+
+interface VariantRow {
+  label: string;
+  price: string;
+  pricingType: PricingType;
+  isActive: boolean;
+}
+
 interface ProductFormValues {
   name: string;
   description: string;
   price: string;
+  minQuantity: string;
   isActive: boolean;
 }
 
 interface Props {
   /** Defined → edit mode (PUT /api/products/:productId). Undefined → create mode (POST /api/products). */
   productId?: string;
-  initialValues?: Partial<ProductFormValues>;
+  initialValues?: Partial<ProductFormValues & { variants?: VariantRow[] }>;
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEFAULT_VALUES: ProductFormValues = {
   name: "",
   description: "",
   price: "",
+  minQuantity: "1",
   isActive: true,
 };
+
+const EMPTY_VARIANT: VariantRow = {
+  label: "",
+  price: "",
+  pricingType: "UNIT",
+  isActive: true,
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function ProductForm({ productId, initialValues }: Props) {
   const router = useRouter();
@@ -32,16 +56,20 @@ export function ProductForm({ productId, initialValues }: Props) {
     ...initialValues,
   });
 
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof ProductFormValues, string>>
-  >({});
+  const [variants, setVariants] = useState<VariantRow[]>(
+    initialValues?.variants ?? [],
+  );
+
+  const hasVariants = variants.length > 0;
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // ─── Validation ────────────────────────────────────────────────────────────
 
   function validate(): boolean {
-    const next: typeof errors = {};
+    const next: Record<string, string> = {};
 
     if (!values.name.trim()) {
       next.name = "Nome é obrigatório.";
@@ -49,12 +77,26 @@ export function ProductForm({ productId, initialValues }: Props) {
       next.name = "Nome deve ter pelo menos 2 caracteres.";
     }
 
-    const priceNum = parseFloat(values.price.replace(",", "."));
-    if (!values.price.trim()) {
-      next.price = "Preço é obrigatório.";
-    } else if (isNaN(priceNum) || priceNum < 0) {
-      next.price = "Preço deve ser um número não negativo.";
+    if (!hasVariants) {
+      const priceNum = parseFloat(values.price.replace(",", "."));
+      if (!values.price.trim()) {
+        next.price = "Preço é obrigatório quando não há variações.";
+      } else if (isNaN(priceNum) || priceNum <= 0) {
+        next.price = "Preço deve ser maior que zero.";
+      }
     }
+
+    const minQty = parseInt(values.minQuantity, 10);
+    if (isNaN(minQty) || minQty < 1) {
+      next.minQuantity = "Quantidade mínima deve ser pelo menos 1.";
+    }
+
+    variants.forEach((v, i) => {
+      if (!v.label.trim()) next[`variant_${i}_label`] = "Rótulo obrigatório.";
+      const vPrice = parseFloat(v.price.replace(",", "."));
+      if (!v.price.trim() || isNaN(vPrice) || vPrice <= 0)
+        next[`variant_${i}_price`] = "Preço deve ser maior que zero.";
+    });
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -72,22 +114,54 @@ export function ProductForm({ productId, initialValues }: Props) {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setErrors((prev) => ({ ...prev, [name]: undefined as unknown as string }));
+  }
+
+  function addVariant() {
+    setVariants((prev) => [...prev, { ...EMPTY_VARIANT }]);
+  }
+
+  function removeVariant(index: number) {
+    setVariants((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateVariant<K extends keyof VariantRow>(
+    index: number,
+    field: K,
+    value: VariantRow[K],
+  ) {
+    setVariants((prev) =>
+      prev.map((v, i) => (i === index ? { ...v, [field]: value } : v)),
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setServerError(null);
-
     if (!validate()) return;
 
-    const price = parseFloat(values.price.replace(",", "."));
-    const body = {
+    const body: Record<string, unknown> = {
       name: values.name.trim(),
       description: values.description.trim() || undefined,
-      price,
       isActive: values.isActive,
+      minQuantity: parseInt(values.minQuantity, 10),
     };
+
+    if (hasVariants) {
+      body.variants = variants.map((v, i) => ({
+        label: v.label.trim(),
+        price: parseFloat(v.price.replace(",", ".")),
+        pricingType: v.pricingType,
+        isActive: v.isActive,
+        sortOrder: i,
+      }));
+      // In edit mode, explicitly clear the fixed price when switching to variants
+      if (isEditMode) body.price = null;
+    } else {
+      body.price = parseFloat(values.price.replace(",", "."));
+      // In edit mode, send empty variants array to remove all existing variants
+      if (isEditMode) body.variants = [];
+    }
 
     setLoading(true);
     try {
@@ -120,8 +194,8 @@ export function ProductForm({ productId, initialValues }: Props) {
   // ─── UI ────────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-5 max-w-lg">
-      {/* Server error banner */}
+    <form onSubmit={handleSubmit} noValidate className="space-y-6 max-w-lg">
+      {/* Server error */}
       {serverError && (
         <div
           role="alert"
@@ -179,32 +253,58 @@ export function ProductForm({ productId, initialValues }: Props) {
         />
       </div>
 
-      {/* Price */}
+      {/* Fixed price — hidden when variants are present */}
+      {!hasVariants && (
+        <div>
+          <label
+            htmlFor="price"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Preço (R$){" "}
+            <span aria-hidden="true" className="text-red-500">
+              *
+            </span>
+          </label>
+          <input
+            id="price"
+            name="price"
+            type="text"
+            inputMode="decimal"
+            value={values.price}
+            onChange={handleChange}
+            placeholder="Ex: 29.90"
+            className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              errors.price ? "border-red-400" : "border-gray-300"
+            }`}
+          />
+          {errors.price && (
+            <p className="mt-1 text-xs text-red-600">{errors.price}</p>
+          )}
+        </div>
+      )}
+
+      {/* Min quantity */}
       <div>
         <label
-          htmlFor="price"
+          htmlFor="minQuantity"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          Preço (R$){" "}
-          <span aria-hidden="true" className="text-red-500">
-            *
-          </span>
+          Quantidade mínima
         </label>
         <input
-          id="price"
-          name="price"
-          type="text"
-          inputMode="decimal"
-          required
-          value={values.price}
+          id="minQuantity"
+          name="minQuantity"
+          type="number"
+          min={1}
+          step={1}
+          value={values.minQuantity}
           onChange={handleChange}
-          placeholder="Ex: 29.90"
-          className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-            errors.price ? "border-red-400" : "border-gray-300"
+          className={`w-32 rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+            errors.minQuantity ? "border-red-400" : "border-gray-300"
           }`}
         />
-        {errors.price && (
-          <p className="mt-1 text-xs text-red-600">{errors.price}</p>
+        {errors.minQuantity && (
+          <p className="mt-1 text-xs text-red-600">{errors.minQuantity}</p>
         )}
       </div>
 
@@ -221,6 +321,136 @@ export function ProductForm({ productId, initialValues }: Props) {
         <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
           Produto ativo (visível no cardápio)
         </label>
+      </div>
+
+      {/* Variants */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <span className="text-sm font-medium text-gray-700">Variações</span>
+            <span className="ml-1.5 text-xs text-gray-400">(opcional)</span>
+          </div>
+          <button
+            type="button"
+            onClick={addVariant}
+            className="rounded-md border border-indigo-300 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            + Adicionar variação
+          </button>
+        </div>
+
+        {variants.length === 0 && (
+          <p className="text-xs text-gray-400 italic">
+            Sem variações — o produto usa preço fixo.
+          </p>
+        )}
+
+        <div className="space-y-4">
+          {variants.map((variant, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Variação {i + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeVariant(i)}
+                  className="text-xs text-red-500 hover:text-red-700 focus:outline-none"
+                >
+                  Remover
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Rótulo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={variant.label}
+                  onChange={(e) => updateVariant(i, "label", e.target.value)}
+                  placeholder="Ex: Pequeno, 500g, Com recheio…"
+                  className={`w-full rounded-md border px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                    errors[`variant_${i}_label`]
+                      ? "border-red-400"
+                      : "border-gray-300"
+                  }`}
+                />
+                {errors[`variant_${i}_label`] && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {errors[`variant_${i}_label`]}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Preço (R$) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={variant.price}
+                    onChange={(e) => updateVariant(i, "price", e.target.value)}
+                    placeholder="Ex: 15.90"
+                    className={`w-full rounded-md border px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      errors[`variant_${i}_price`]
+                        ? "border-red-400"
+                        : "border-gray-300"
+                    }`}
+                  />
+                  {errors[`variant_${i}_price`] && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {errors[`variant_${i}_price`]}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Tipo de preço
+                  </label>
+                  <select
+                    value={variant.pricingType}
+                    onChange={(e) =>
+                      updateVariant(
+                        i,
+                        "pricingType",
+                        e.target.value as PricingType,
+                      )
+                    }
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="UNIT">Por unidade</option>
+                    <option value="WEIGHT">Por peso</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id={`variant_${i}_isActive`}
+                  checked={variant.isActive}
+                  onChange={(e) =>
+                    updateVariant(i, "isActive", e.target.checked)
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label
+                  htmlFor={`variant_${i}_isActive`}
+                  className="text-xs font-medium text-gray-600"
+                >
+                  Variação ativa
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Actions */}

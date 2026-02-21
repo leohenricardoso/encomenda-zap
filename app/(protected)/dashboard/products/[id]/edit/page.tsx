@@ -44,8 +44,15 @@ export default async function EditProductPage({ params }: Props) {
         initialValues={{
           name: product.name,
           description: product.description ?? "",
-          price: product.price.toFixed(2),
+          price: product.price != null ? product.price.toFixed(2) : "",
+          minQuantity: String(product.minQuantity),
           isActive: product.isActive,
+          variants: product.variants.map((v) => ({
+            label: v.label,
+            price: v.price.toFixed(2),
+            pricingType: v.pricingType,
+            isActive: v.isActive,
+          })),
         }}
       />
     </main>
