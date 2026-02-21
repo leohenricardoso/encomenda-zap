@@ -22,9 +22,9 @@ const LABELS: Record<BadgeVariant, string> = {
   inactive: "Inativo",
 };
 
-// Using bg-[rgb(var(--color-*))] per the design system contract.
-// active  → emerald-50 bg / emerald-700 text (soft, readable)
-// inactive → slate bg-muted / text-muted  (already in @theme)
+// All colours use rgb(var(--color-X)) arbitrary values per the design system.
+// active   → emerald-50 bg / emerald-700 text (soft, readable)
+// inactive → bg-muted / text-muted from @theme tokens
 const STYLES: Record<BadgeVariant, string> = {
   active: [
     "bg-[rgb(240_253_244)]", // emerald-50

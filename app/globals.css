@@ -43,8 +43,8 @@
 }
 
 /* ─── RGB Design Tokens (CSS Custom Properties) ──────────────────────────────
-   Raw RGB channel values — enables alpha composition via rgb(var(--color-*))
-   and bg-[rgb(var(--color-*))] arbitrary Tailwind values when needed.
+   Raw RGB channel values — enables alpha composition and arbitrary Tailwind
+   values such as: bg-[rgb(var(--color-bg))] or text-[rgb(var(--color-text))].
    These mirror the @theme hex values above.
    ─────────────────────────────────────────────────────────────────────────── */
 :root {
