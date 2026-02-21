@@ -42,6 +42,25 @@
   --radius-xl: 1rem; /* 16px */
 }
 
+/* ─── RGB Design Tokens (CSS Custom Properties) ──────────────────────────────
+   Raw RGB channel values — enables alpha composition via rgb(var(--color-*))
+   and bg-[rgb(var(--color-*))] arbitrary Tailwind values when needed.
+   These mirror the @theme hex values above.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --color-bg: 255 255 255; /* surface */
+  --color-bg-muted: 248 250 252; /* surface-subtle */
+  --color-primary: 15 23 42; /* foreground */
+  --color-primary-foreground: 255 255 255; /* on-dark text */
+  --color-accent: 59 130 246; /* accent blue-500 */
+  --color-border: 226 232 240; /* line */
+  --color-text: 15 23 42; /* foreground */
+  --color-text-muted: 100 116 139; /* foreground-muted */
+
+  /* Layout */
+  --sidebar-width: 15rem; /* 240px */
+}
+
 /* ─── Base Resets ────────────────────────────────────────────────────────────
    Extends Tailwind's built-in preflight with app-level defaults.
    ─────────────────────────────────────────────────────────────────────────── */
