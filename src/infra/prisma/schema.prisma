@@ -20,8 +20,9 @@ model Store {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admin    Admin?
-  products Product[]
+  admin     Admin?
+  products  Product[]
+  customers Customer[]
 
   @@index([slug])
   @@map("stores")
@@ -105,4 +106,31 @@ model ProductVariant {
   @@index([productId])
   @@index([storeId])
   @@map("product_variants")
+}
+
+// ─── Customer ─────────────────────────────────────────────────────────────────
+// A customer who has placed (or is about to place) an order at a Store.
+//
+// whatsapp: stored normalised — digits only with country code (e.g. "5511999998888").
+//           The @@unique([whatsapp, storeId]) constraint ensures that the same
+//           phone number is treated as one customer per store, enabling dedup
+//           when incoming WhatsApp messages arrive.
+//
+// Future: add an `orders Order[]` relation once the Order model is introduced.
+
+model Customer {
+  id        String   @id @default(uuid())
+  storeId   String
+  name      String
+  /// Normalised digits-only string with country code. Example: "5511999998888".
+  whatsapp  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id])
+
+  /// One customer per WhatsApp number per store.
+  @@unique([whatsapp, storeId])
+  @@index([storeId])
+  @@map("customers")
 }
