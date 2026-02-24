@@ -8,6 +8,7 @@ import {
   OrderStatus,
   canTransitionTo,
 } from "@/domain/order/Order";
+import type { OrderItem } from "@/domain/order/OrderItem";
 
 /**
  * PrismaOrderRepository — concrete implementation of IOrderRepository.
@@ -31,7 +32,7 @@ export class PrismaOrderRepository implements IOrderRepository {
     customerId: string;
     deliveryDate: Date;
     shippingAddress: string | null;
-    status: string; // Prisma enum is a string at runtime
+    status: string;
     createdAt: Date;
     updatedAt: Date;
   }): Order {
@@ -44,6 +45,32 @@ export class PrismaOrderRepository implements IOrderRepository {
       status: raw.status as OrderStatus,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
+    };
+  }
+
+  private toItemEntity(raw: {
+    id: string;
+    orderId: string;
+    productId: string;
+    variantId: string | null;
+    productName: string;
+    variantLabel: string | null;
+    quantity: number;
+    unitPrice: { toNumber(): number };
+    discountAmount: { toNumber(): number };
+    createdAt: Date;
+  }): OrderItem {
+    return {
+      id: raw.id,
+      orderId: raw.orderId,
+      productId: raw.productId,
+      variantId: raw.variantId,
+      productName: raw.productName,
+      variantLabel: raw.variantLabel,
+      quantity: raw.quantity,
+      unitPrice: Number(raw.unitPrice),
+      discountAmount: Number(raw.discountAmount),
+      createdAt: raw.createdAt,
     };
   }
 
@@ -89,6 +116,21 @@ export class PrismaOrderRepository implements IOrderRepository {
       where: { id, storeId },
     });
     return row ? this.toEntity(row) : null;
+  }
+
+  async findByIdWithItems(
+    id: string,
+    storeId: string,
+  ): Promise<(Order & { items: OrderItem[] }) | null> {
+    const row = await prisma.order.findFirst({
+      where: { id, storeId },
+      include: { items: { orderBy: { createdAt: "asc" } } },
+    });
+    if (!row) return null;
+    return {
+      ...this.toEntity(row),
+      items: row.items.map((item) => this.toItemEntity(item)),
+    };
   }
 
   async findAllByCustomer(

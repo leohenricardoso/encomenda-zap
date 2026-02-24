@@ -12,8 +12,7 @@
  *   prepare the order.
  *
  * Planned expansions:
- *   ─ OrderItem[]  — line items (product or variant + quantity + unit price)
- *   ─ Payment      — payment intent / confirmation reference
+ *   ─ Payment       — payment intent / confirmation reference
  *   ─ StatusHistory — audit trail of every transition with actor + timestamp
  */
 

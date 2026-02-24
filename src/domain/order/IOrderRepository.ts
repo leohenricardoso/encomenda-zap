@@ -5,6 +5,7 @@ import type {
   UpdateOrderInput,
   OrderFilters,
 } from "./Order";
+import type { OrderItem } from "./OrderItem";
 
 /**
  * IOrderRepository — domain port (interface).
@@ -18,9 +19,7 @@ import type {
  * via a generic update().
  *
  * Future expansions:
- *   ─ findAllByCustomer() — order history for a specific customer
- *   ─ findWithItems()     — eager-loads OrderItems for receipt/confirmation views
- *   ─ countByStatus()     — dashboard KPIs without loading full rows
+ *   ─ countByStatus() — dashboard KPIs without loading full rows
  */
 export interface IOrderRepository {
   // ─── Queries ────────────────────────────────────────────────────────────────
@@ -35,6 +34,16 @@ export interface IOrderRepository {
    * Returns a single order by id, tenant-scoped. Null if not found.
    */
   findById(id: string, storeId: string): Promise<Order | null>;
+
+  /**
+   * Returns a single order with its items eagerly loaded.
+   * Useful for receipt, confirmation and review pages.
+   * Null if the order does not belong to the store.
+   */
+  findByIdWithItems(
+    id: string,
+    storeId: string,
+  ): Promise<(Order & { items: OrderItem[] }) | null>;
 
   /**
    * Returns all orders placed by a specific customer within the store,

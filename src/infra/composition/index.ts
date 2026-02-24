@@ -35,6 +35,7 @@ import { PrismaProductRepository } from "@/infra/repositories/PrismaProductRepos
 import { PrismaCatalogRepository } from "@/infra/repositories/PrismaCatalogRepository";
 import { PrismaCustomerRepository } from "@/infra/repositories/PrismaCustomerRepository";
 import { PrismaOrderRepository } from "@/infra/repositories/PrismaOrderRepository";
+import { PrismaOrderItemRepository } from "@/infra/repositories/PrismaOrderItemRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -67,6 +68,7 @@ const productRepo = new PrismaProductRepository();
 const catalogRepo = new PrismaCatalogRepository();
 const customerRepo = new PrismaCustomerRepository();
 const orderRepo = new PrismaOrderRepository();
+const orderItemRepo = new PrismaOrderItemRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
@@ -111,4 +113,4 @@ export { listProductsUseCase, getProductByIdUseCase };
 /**
  * Repository singletons — available for direct import in future use cases.
  */
-export { customerRepo, orderRepo };
+export { customerRepo, orderRepo, orderItemRepo };
