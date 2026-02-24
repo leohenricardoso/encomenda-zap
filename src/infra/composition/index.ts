@@ -37,6 +37,7 @@ import { PrismaCustomerRepository } from "@/infra/repositories/PrismaCustomerRep
 import { PrismaOrderRepository } from "@/infra/repositories/PrismaOrderRepository";
 import { PrismaOrderItemRepository } from "@/infra/repositories/PrismaOrderItemRepository";
 import { PrismaStoreScheduleRepository } from "@/infra/repositories/PrismaStoreScheduleRepository";
+import { PrismaPickupSlotRepository } from "@/infra/repositories/PrismaPickupSlotRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -54,6 +55,10 @@ import { GetStoreCatalogUseCase } from "@/application/catalog/GetStoreCatalogUse
 import { PlaceOrderService } from "@/application/order/PlaceOrderService";
 import { GetStoreScheduleUseCase } from "@/application/schedule/GetStoreScheduleUseCase";
 import { SetDayAvailabilityUseCase } from "@/application/schedule/SetDayAvailabilityUseCase";
+import { ListPickupSlotsUseCase } from "@/application/pickupSlot/ListPickupSlotsUseCase";
+import { CreatePickupSlotUseCase } from "@/application/pickupSlot/CreatePickupSlotUseCase";
+import { TogglePickupSlotUseCase } from "@/application/pickupSlot/TogglePickupSlotUseCase";
+import { GetPublicPickupSlotsUseCase } from "@/application/pickupSlot/GetPublicPickupSlotsUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -62,6 +67,7 @@ import { ProductController } from "@/controllers/http/ProductController";
 import { ProductVariantController } from "@/controllers/http/ProductVariantController";
 import { PlaceOrderController } from "@/controllers/http/PlaceOrderController";
 import { StoreScheduleController } from "@/controllers/http/StoreScheduleController";
+import { StorePickupSlotController } from "@/controllers/http/StorePickupSlotController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -76,6 +82,7 @@ const customerRepo = new PrismaCustomerRepository();
 const orderRepo = new PrismaOrderRepository();
 const orderItemRepo = new PrismaOrderItemRepository();
 const scheduleRepo = new PrismaStoreScheduleRepository();
+const pickupSlotRepo = new PrismaPickupSlotRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
@@ -139,4 +146,21 @@ const setDayAvailabilityUseCase = new SetDayAvailabilityUseCase(scheduleRepo);
 export const storeScheduleController = new StoreScheduleController(
   getStoreScheduleUseCase,
   setDayAvailabilityUseCase,
+);
+
+// ─── Pickup Slots ───────────────────────────────────────────────────────────
+
+const listPickupSlotsUseCase = new ListPickupSlotsUseCase(pickupSlotRepo);
+const createPickupSlotUseCase = new CreatePickupSlotUseCase(pickupSlotRepo);
+const togglePickupSlotUseCase = new TogglePickupSlotUseCase(pickupSlotRepo);
+const getPublicPickupSlotsUseCase = new GetPublicPickupSlotsUseCase(
+  catalogRepo,
+  pickupSlotRepo,
+);
+
+export const storePickupSlotController = new StorePickupSlotController(
+  listPickupSlotsUseCase,
+  createPickupSlotUseCase,
+  togglePickupSlotUseCase,
+  getPublicPickupSlotsUseCase,
 );

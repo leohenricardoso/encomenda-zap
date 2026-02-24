@@ -20,11 +20,12 @@ model Store {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admin     Admin?
-  products  Product[]
-  customers Customer[]
-  orders    Order[]
-  schedules StoreSchedule[]
+  admin       Admin?
+  products    Product[]
+  customers   Customer[]
+  orders      Order[]
+  schedules   StoreSchedule[]
+  pickupSlots StorePickupSlot[]
 
   @@index([slug])
   @@map("stores")
@@ -265,4 +266,36 @@ model StoreSchedule {
   @@unique([storeId, date])
   @@index([storeId])
   @@map("store_schedules")
+}
+
+// ─── StorePickupSlot ──────────────────────────────────────────────────────────
+// Recurring weekly time-windows during which a store accepts pickup orders.
+//
+// Design notes:
+// ─ A store may define multiple slots per day (e.g. 09:00–12:00 and 14:00–18:00).
+// ─ startTime / endTime are stored as "HH:mm" strings.  Lexicographic comparison
+//   is valid because the format is fixed-width (zero-padded).
+// ─ Overlap validation is enforced in the application layer (CreatePickupSlotUseCase)
+//   so the DB stays schema-only.  The unique index on (storeId, dayOfWeek) would
+//   be too restrictive; the app layer checks against active slots only.
+// ─ isActive: false means the slot is soft-deleted (kept for audit / recovery).
+// ─ dayOfWeek follows JS convention: 0 = Sunday … 6 = Saturday.
+
+model StorePickupSlot {
+  id         String   @id @default(uuid())
+  storeId    String
+  /// 0 = Sunday, 1 = Monday … 6 = Saturday (JS Date.getDay() convention).
+  dayOfWeek  Int
+  /// Opening time in HH:mm format (e.g. "09:00").
+  startTime  String
+  /// Closing time in HH:mm format (e.g. "12:00"). Must be > startTime.
+  endTime    String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, dayOfWeek])
+  @@map("store_pickup_slots")
 }
