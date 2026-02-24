@@ -50,12 +50,14 @@ import { CreateVariantUseCase } from "@/application/product/CreateVariantUseCase
 import { UpdateVariantUseCase } from "@/application/product/UpdateVariantUseCase";
 import { DeleteVariantUseCase } from "@/application/product/DeleteVariantUseCase";
 import { GetStoreCatalogUseCase } from "@/application/catalog/GetStoreCatalogUseCase";
+import { PlaceOrderService } from "@/application/order/PlaceOrderService";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 import { AuthController } from "@/controllers/http/AuthController";
 import { ProductController } from "@/controllers/http/ProductController";
 import { ProductVariantController } from "@/controllers/http/ProductVariantController";
+import { PlaceOrderController } from "@/controllers/http/PlaceOrderController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -102,6 +104,15 @@ export const productVariantController = new ProductVariantController(
   updateVariantUseCase,
   deleteVariantUseCase,
 );
+
+const placeOrderService = new PlaceOrderService(
+  catalogRepo,
+  customerRepo,
+  productRepo,
+  orderRepo,
+  orderItemRepo,
+);
+export const placeOrderController = new PlaceOrderController(placeOrderService);
 
 /**
  * Use case singletons — available for direct use in Server Components.

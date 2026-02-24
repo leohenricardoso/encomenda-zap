@@ -1,6 +1,6 @@
 import type { CatalogProduct } from "@/domain/catalog/types";
 import { PriceDisplay } from "./PriceDisplay";
-import { VariationSelector } from "./VariationSelector";
+import { OrderProductSection } from "./OrderProductSection";
 
 // ─── MinQuantity badge ────────────────────────────────────────────────────────
 
@@ -57,6 +57,7 @@ function ImagePlaceholder() {
 
 interface CatalogProductCardProps {
   product: CatalogProduct;
+  storeSlug: string;
 }
 
 /**
@@ -67,7 +68,10 @@ interface CatalogProductCardProps {
  *
  * Future: accept `onOrder` callback or wrap with an order modal trigger.
  */
-export function CatalogProductCard({ product }: CatalogProductCardProps) {
+export function CatalogProductCard({
+  product,
+  storeSlug,
+}: CatalogProductCardProps) {
   const hasVariants = product.variants.length > 0;
 
   return (
@@ -102,38 +106,15 @@ export function CatalogProductCard({ product }: CatalogProductCardProps) {
           )}
         </div>
 
-        {/* Price + variants */}
-        <div className="mt-auto flex flex-col gap-2">
-          {hasVariants ? (
-            // Client Component: holds variant selection state
-            <VariationSelector
-              variants={product.variants}
-              basePrice={product.price}
-            />
+        {/* Price + variants + order CTA */}
+        <div className="mt-auto">
+          {hasVariants || product.price !== null ? (
+            // Client Component: handles variant selection, qty, and ordering
+            <OrderProductSection product={product} storeSlug={storeSlug} />
           ) : (
-            // Simple product — static, no interactivity needed
+            // Fallback for products with no price info
             <PriceDisplay price={product.price} variants={[]} />
           )}
-
-          {/* Min quantity note */}
-          <MinQuantityNote qty={product.minQuantity} />
-        </div>
-
-        {/* ── Order CTA (placeholder for future "Encomendar" button) ──── */}
-        <div className="border-t border-[rgb(var(--color-border))] pt-3">
-          <button
-            type="button"
-            disabled
-            aria-label={`Encomendar ${product.name} (em breve)`}
-            className={[
-              "w-full rounded-lg border border-[rgb(var(--color-border))]",
-              "px-4 py-2 text-xs font-medium",
-              "text-[rgb(var(--color-text-muted))]",
-              "cursor-not-allowed opacity-50",
-            ].join(" ")}
-          >
-            Encomendar em breve
-          </button>
         </div>
       </div>
     </article>

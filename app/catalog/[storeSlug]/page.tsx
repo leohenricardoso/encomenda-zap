@@ -74,7 +74,11 @@ export default async function CatalogPage({ params }: Props) {
             <CatalogEmptyState />
           ) : (
             catalog.products.map((product) => (
-              <CatalogProductCard key={product.id} product={product} />
+              <CatalogProductCard
+                key={product.id}
+                product={product}
+                storeSlug={storeSlug}
+              />
             ))
           )}
         </div>
