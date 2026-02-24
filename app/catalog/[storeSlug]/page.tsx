@@ -4,6 +4,7 @@ import { getStoreCatalogUseCase } from "@/infra/composition";
 import { CatalogHeader } from "./_components/CatalogHeader";
 import { CatalogProductCard } from "./_components/CatalogProductCard";
 import { CatalogEmptyState } from "./_components/CatalogEmptyState";
+import { CartFloatingBar } from "./_components/CartFloatingBar";
 
 // ─── Revalidation ─────────────────────────────────────────────────────────────
 // ISR: serve cached HTML for up to 60 s, regenerate in background.
@@ -68,7 +69,7 @@ export default async function CatalogPage({ params }: Props) {
       />
 
       {/* ── Product grid ─────────────────────────────────────────────── */}
-      <main className="mx-auto w-full max-w-screen-xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-screen-xl px-4 py-8 pb-28 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {catalog.products.length === 0 ? (
             <CatalogEmptyState />
@@ -97,6 +98,9 @@ export default async function CatalogPage({ params }: Props) {
           </span>
         </p>
       </footer>
+
+      {/* ── Floating cart bar (Client Component — reads sessionStorage) ─ */}
+      <CartFloatingBar storeSlug={storeSlug} />
     </div>
   );
 }

@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { CatalogProduct, CatalogVariant } from "@/domain/catalog/types";
-import { writeCart } from "../_lib/cart";
+import {
+  readCart,
+  writeCart,
+  addOrUpdateItem,
+  removeItem,
+  cartItemKey,
+} from "../_lib/cart";
 import { CUSTOMER_SESSION_KEY } from "../identificar/_components/CustomerIdentityForm";
 import { PriceDisplay } from "./PriceDisplay";
 
@@ -25,13 +31,16 @@ interface OrderProductSectionProps {
 }
 
 /**
- * OrderProductSection — interactive order entry on a catalog card.
+ * OrderProductSection — interactive order panel on a catalog card.
  *
- * Handles:
- *  - Variant pill selection
- *  - Quantity counter (respects minQuantity)
- *  - "Encomendar" CTA → writes cart to sessionStorage and navigates to
- *    /identificar (or /pedido/revisar when the customer is already identified)
+ * Multi-cart behaviour:
+ *  - On first add → appends to cart (other items kept).
+ *  - On second add of same product+variant → updates quantity.
+ *  - Remove button → pulls item from cart without touching others.
+ *  - Customer navigates to /pedido/revisar when already identified,
+ *    or /identificar first.
+ *
+ * Cart state is read from sessionStorage on mount and after every mutation.
  */
 export function OrderProductSection({
   product,
@@ -47,8 +56,35 @@ export function OrderProductSection({
   const [quantity, setQuantity] = useState(Math.max(product.minQuantity, 1));
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // ── Derived state ──────────────────────────────────────────────────────────
+  // How many of THIS item (product+variant) is already in the cart
+  const [inCartQty, setInCartQty] = useState<number>(0);
+
+  // Sync inCartQty from sessionStorage whenever variant changes (or on mount)
+  const syncFromCart = useCallback(() => {
+    const cart = readCart();
+    if (!cart || cart.storeSlug !== storeSlug) {
+      setInCartQty(0);
+      return;
+    }
+    const key = cartItemKey(product.id, selectedVariant?.id ?? null);
+    const existing = cart.items.find(
+      (i) => cartItemKey(i.productId, i.variantId) === key,
+    );
+    if (existing) {
+      setInCartQty(existing.quantity);
+      setQuantity(existing.quantity); // keep spinner in sync
+    } else {
+      setInCartQty(0);
+    }
+  }, [product.id, selectedVariant, storeSlug]);
+
+  useEffect(() => {
+    syncFromCart();
+  }, [syncFromCart]);
+
+  // ── Derived ────────────────────────────────────────────────────────────────
   const unitPrice = resolveUnitPrice(product, selectedVariant);
+  const isInCart = inCartQty > 0;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function toggleVariant(variant: CatalogVariant) {
@@ -64,10 +100,9 @@ export function OrderProductSection({
     setQuantity((q) => Math.max(product.minQuantity, q - 1));
   }
 
-  function handleOrder() {
-    // Validate variant selection when required
+  function handleAddOrUpdate() {
     if (hasVariants && !selectedVariant) {
-      setValidationError("Selecione uma variação antes de encomendar.");
+      setValidationError("Selecione uma variação antes de adicionar.");
       return;
     }
     if (unitPrice === null) {
@@ -75,24 +110,19 @@ export function OrderProductSection({
       return;
     }
 
-    // Build cart session (single-item replace strategy)
-    writeCart({
-      storeSlug,
-      items: [
-        {
-          productId: product.id,
-          variantId: selectedVariant?.id ?? null,
-          productName: product.name,
-          variantLabel: selectedVariant?.label ?? null,
-          quantity,
-          unitPrice,
-          lineTotal: unitPrice * quantity,
-        },
-      ],
-      shippingAddress: null,
+    const prev = readCart();
+    const next = addOrUpdateItem(prev, storeSlug, {
+      productId: product.id,
+      variantId: selectedVariant?.id ?? null,
+      productName: product.name,
+      variantLabel: selectedVariant?.label ?? null,
+      quantity,
+      unitPrice,
     });
+    writeCart(next);
+    syncFromCart(); // reflect badge immediately
 
-    // Navigate — skip identificar when the customer is already known
+    // Optimistically navigate when customer is already identified
     const alreadyIdentified = Boolean(
       sessionStorage.getItem(CUSTOMER_SESSION_KEY),
     );
@@ -101,6 +131,15 @@ export function OrderProductSection({
     } else {
       router.push(`/catalog/${storeSlug}/identificar`);
     }
+  }
+
+  function handleRemove() {
+    const prev = readCart();
+    if (!prev) return;
+    const next = removeItem(prev, product.id, selectedVariant?.id ?? null);
+    writeCart(next);
+    setInCartQty(0);
+    setQuantity(Math.max(product.minQuantity, 1));
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -112,6 +151,16 @@ export function OrderProductSection({
         variants={activeVariants}
         selectedVariant={selectedVariant}
       />
+
+      {/* In-cart badge */}
+      {isInCart && (
+        <div className="flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-1 w-fit">
+          <span className="flex h-2 w-2 rounded-full bg-accent" />
+          <span className="text-xs font-medium text-accent">
+            {inCartQty}× no pedido
+          </span>
+        </div>
+      )}
 
       {/* Variant pills */}
       {hasVariants && (
@@ -134,9 +183,7 @@ export function OrderProductSection({
                   isSelected
                     ? "border-accent bg-accent text-white"
                     : "border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] text-[rgb(var(--color-text))]",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                ].join(" ")}
               >
                 {variant.label}
               </button>
@@ -200,24 +247,36 @@ export function OrderProductSection({
       {/* Min quantity note */}
       {product.minQuantity > 1 && (
         <p className="text-xs text-[rgb(var(--color-text-muted))]">
-          Mínimo {product.minQuantity}{" "}
-          {product.minQuantity === 1 ? "unidade" : "unidades"}
+          Mínimo {product.minQuantity} unidades
         </p>
       )}
 
-      {/* Order CTA */}
-      <button
-        type="button"
-        onClick={handleOrder}
-        className={[
-          "w-full rounded-lg px-4 py-2 text-xs font-semibold",
-          "bg-foreground text-surface",
-          "transition-colors duration-150 hover:bg-foreground/90 active:scale-[.98]",
-          "ring-focus",
-        ].join(" ")}
-      >
-        Encomendar
-      </button>
+      {/* CTAs */}
+      <div className="flex flex-col gap-2 border-t border-[rgb(var(--color-border))] pt-3">
+        <button
+          type="button"
+          onClick={handleAddOrUpdate}
+          className={[
+            "w-full rounded-lg px-4 py-2 text-xs font-semibold ring-focus",
+            "transition-colors duration-150 active:scale-[.98]",
+            isInCart
+              ? "bg-accent/10 text-accent hover:bg-accent/20"
+              : "bg-foreground text-surface hover:bg-foreground/90",
+          ].join(" ")}
+        >
+          {isInCart ? "Atualizar e ver pedido" : "Adicionar ao pedido"}
+        </button>
+
+        {isInCart && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="w-full rounded-lg px-4 py-2 text-xs font-medium ring-focus text-danger hover:bg-danger/5 transition-colors duration-150"
+          >
+            Remover do pedido
+          </button>
+        )}
+      </div>
     </div>
   );
 }

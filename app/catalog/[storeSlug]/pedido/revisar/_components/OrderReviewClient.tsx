@@ -1,9 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { readCart, clearCart } from "../../../_lib/cart";
-import type { CartItem } from "../../../_lib/cart";
+import {
+  readCart,
+  writeCart,
+  clearCart,
+  removeItem,
+  updateItemQuantity,
+  cartItemKey,
+} from "../../../_lib/cart";
+import type { CartItem, CartSession } from "../../../_lib/cart";
 import {
   CUSTOMER_SESSION_KEY,
   type CustomerSession,
@@ -11,23 +18,26 @@ import {
 import { Button } from "../../../../../_components/Button";
 import { Card } from "../../../../../_components/Card";
 
-// ─── Local types ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Local types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/**
- * Minimal shape of the order confirmation returned by POST /api/orders.
- * Defined locally to avoid importing server-side modules in a Client Component.
- */
 interface OrderConfirmation {
   reference: string;
   storeName: string;
   total: number;
   deliveryDate: string;
   customer: { name: string; whatsapp: string };
+  items: {
+    productName: string;
+    variantLabel: string | null;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }[];
 }
 
-type PageState = "loading" | "review" | "submitting" | "success" | "error";
+type PageState = "loading" | "review" | "submitting" | "success";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const formatCurrency = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -55,7 +65,7 @@ function formatWhatsApp(raw: string): string {
   return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -69,48 +79,133 @@ function Divider() {
   return <hr className="border-line" />;
 }
 
-interface OrderItemRowProps {
+// â”€â”€ Editable item row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+interface EditableItemRowProps {
   item: CartItem;
+  disabled: boolean;
+  onQuantityChange: (
+    productId: string,
+    variantId: string | null,
+    newQty: number,
+  ) => void;
+  onRemove: (productId: string, variantId: string | null) => void;
 }
 
-function OrderItemRow({ item }: OrderItemRowProps) {
+function EditableItemRow({
+  item,
+  disabled,
+  onQuantityChange,
+  onRemove,
+}: EditableItemRowProps) {
+  const key = cartItemKey(item.productId, item.variantId);
+
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground leading-snug">
-          {item.productName}
-        </p>
-        {item.variantLabel && (
-          <p className="mt-0.5 text-xs text-foreground-muted">
-            {item.variantLabel}
+    <div className="flex flex-col gap-2 rounded-lg border border-line p-3 bg-surface-subtle">
+      {/* Product info */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground leading-snug">
+            {item.productName}
           </p>
-        )}
-        <p className="mt-1 text-xs text-foreground-muted">
-          {item.quantity} × {formatCurrency(item.unitPrice)}
+          {item.variantLabel && (
+            <p className="mt-0.5 text-xs text-foreground-muted">
+              {item.variantLabel}
+            </p>
+          )}
+        </div>
+        <p className="text-sm font-semibold text-foreground shrink-0">
+          {formatCurrency(item.lineTotal)}
         </p>
       </div>
-      <p className="text-sm font-semibold text-foreground shrink-0">
-        {formatCurrency(item.lineTotal)}
-      </p>
+
+      {/* Controls row */}
+      <div className="flex items-center justify-between gap-4">
+        {/* Quantity stepper */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-foreground-muted">Qtd.</span>
+          <button
+            type="button"
+            aria-label="Diminuir quantidade"
+            disabled={disabled || item.quantity <= 1}
+            onClick={() =>
+              onQuantityChange(
+                item.productId,
+                item.variantId,
+                item.quantity - 1,
+              )
+            }
+            className={[
+              "flex h-6 w-6 items-center justify-center rounded border text-xs font-bold",
+              "border-line bg-surface transition-colors duration-100",
+              disabled || item.quantity <= 1
+                ? "cursor-not-allowed opacity-40"
+                : "hover:bg-surface-hover",
+            ].join(" ")}
+          >
+            −
+          </button>
+          <span
+            aria-live="polite"
+            className="min-w-[1.75rem] text-center text-sm font-semibold text-foreground"
+          >
+            {item.quantity}
+          </span>
+          <button
+            type="button"
+            aria-label="Aumentar quantidade"
+            disabled={disabled}
+            onClick={() =>
+              onQuantityChange(
+                item.productId,
+                item.variantId,
+                item.quantity + 1,
+              )
+            }
+            className={[
+              "flex h-6 w-6 items-center justify-center rounded border text-xs font-bold",
+              "border-line bg-surface transition-colors duration-100",
+              disabled
+                ? "cursor-not-allowed opacity-40"
+                : "hover:bg-surface-hover",
+            ].join(" ")}
+          >
+            +
+          </button>
+          <span className="text-xs text-foreground-muted">
+            {formatCurrency(item.unitPrice)}
+          </span>
+        </div>
+
+        {/* Remove */}
+        <button
+          type="button"
+          aria-label={`Remover ${item.productName}`}
+          disabled={disabled}
+          onClick={() => onRemove(item.productId, item.variantId)}
+          className={[
+            "text-xs text-danger transition-colors duration-100 ring-focus rounded",
+            disabled ? "cursor-not-allowed opacity-40" : "hover:underline",
+          ].join(" ")}
+        >
+          Remover
+        </button>
+      </div>
     </div>
   );
 }
 
+// â”€â”€ Success view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 interface SuccessViewProps {
   confirmation: OrderConfirmation;
-  storeSlug: string;
   onNewOrder: () => void;
 }
 
-function SuccessView({
-  confirmation,
-  storeSlug,
-  onNewOrder,
-}: SuccessViewProps) {
+function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
   return (
     <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-[480px] space-y-8">
-        {/* ── Icon + heading ── */}
         <div className="flex flex-col items-center gap-4 text-center">
           <div
             className="flex h-14 w-14 items-center justify-center rounded-xl shadow-sm"
@@ -129,7 +224,6 @@ function SuccessView({
           </div>
         </div>
 
-        {/* ── Summary card ── */}
         <Card>
           <div className="flex flex-col gap-4">
             <SectionLabel>Confirmação</SectionLabel>
@@ -162,14 +256,44 @@ function SuccessView({
                 </p>
                 <p className="mt-0.5 font-medium text-foreground capitalize">
                   {formatDeliveryDate(
-                    typeof confirmation.deliveryDate === "string"
-                      ? confirmation.deliveryDate.split("T")[0]!
-                      : new Date(confirmation.deliveryDate)
-                          .toISOString()
-                          .split("T")[0]!,
+                    (typeof confirmation.deliveryDate === "string"
+                      ? confirmation.deliveryDate
+                      : new Date(confirmation.deliveryDate).toISOString()
+                    ).split("T")[0]!,
                   )}
                 </p>
               </div>
+            </div>
+
+            <Divider />
+
+            {/* Item list snapshot */}
+            <div className="flex flex-col gap-2">
+              {confirmation.items.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start justify-between gap-3 text-sm"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-foreground">
+                      {item.productName}
+                    </span>
+                    {item.variantLabel && (
+                      <span className="text-foreground-muted">
+                        {" "}
+                        − {item.variantLabel}
+                      </span>
+                    )}
+                    <span className="text-foreground-muted">
+                      {" "}
+                      × {item.quantity}
+                    </span>
+                  </div>
+                  <span className="font-semibold text-foreground shrink-0">
+                    {formatCurrency(item.lineTotal)}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <Divider />
@@ -195,7 +319,7 @@ function SuccessView({
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface OrderReviewClientProps {
   storeSlug: string;
@@ -206,7 +330,7 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
 
   const [pageState, setPageState] = useState<PageState>("loading");
   const [customer, setCustomer] = useState<CustomerSession | null>(null);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartSession, setCartSession] = useState<CartSession | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<string>(tomorrowISO());
   const [shippingAddress, setShippingAddress] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -214,40 +338,64 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
     null,
   );
 
-  // ── Hydrate from sessionStorage ───────────────────────────────────────────
+  // â”€â”€ Hydrate from sessionStorage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const rawCustomer = sessionStorage.getItem(CUSTOMER_SESSION_KEY);
     const cart = readCart();
 
-    const missingCustomer = !rawCustomer;
-    const missingCart =
-      !cart || cart.storeSlug !== storeSlug || cart.items.length === 0;
-
-    if (missingCustomer) {
-      // No customer — send back to identificar
+    if (!rawCustomer) {
       router.replace(`/catalog/${storeSlug}/identificar`);
       return;
     }
-
-    if (missingCart) {
-      // No valid cart — send back to catalog
+    if (!cart || cart.storeSlug !== storeSlug || cart.items.length === 0) {
       router.replace(`/catalog/${storeSlug}`);
       return;
     }
 
-    const parsed = JSON.parse(rawCustomer) as CustomerSession;
-    setCustomer(parsed);
-    setCartItems(cart.items);
+    setCustomer(JSON.parse(rawCustomer) as CustomerSession);
+    setCartSession(cart);
     if (cart.shippingAddress) setShippingAddress(cart.shippingAddress);
     setPageState("review");
   }, [storeSlug, router]);
 
-  // ── Derived state ─────────────────────────────────────────────────────────
-  const total = cartItems.reduce((sum, item) => sum + item.lineTotal, 0);
+  // â”€â”€ Cart mutation helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  function applyCartMutation(next: CartSession) {
+    if (next.items.length === 0) {
+      // Empty cart â€” go back to catalog
+      clearCart();
+      router.push(`/catalog/${storeSlug}`);
+      return;
+    }
+    writeCart(next);
+    setCartSession(next);
+  }
+
+  function handleQuantityChange(
+    productId: string,
+    variantId: string | null,
+    newQty: number,
+  ) {
+    if (!cartSession) return;
+    const next = updateItemQuantity(
+      cartSession,
+      productId,
+      variantId,
+      newQty,
+      1,
+    );
+    applyCartMutation(next);
+  }
+
+  function handleRemoveItem(productId: string, variantId: string | null) {
+    if (!cartSession) return;
+    const next = removeItem(cartSession, productId, variantId);
+    applyCartMutation(next);
+  }
+
+  // â”€â”€ Submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function handleConfirm() {
-    if (!customer) return;
+    if (!customer || !cartSession) return;
     setSubmitError(null);
     setPageState("submitting");
 
@@ -257,11 +405,8 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storeSlug,
-          customer: {
-            name: customer.name,
-            whatsapp: customer.whatsapp,
-          },
-          items: cartItems.map((item) => ({
+          customer: { name: customer.name, whatsapp: customer.whatsapp },
+          items: cartSession.items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId ?? null,
             quantity: item.quantity,
@@ -286,21 +431,13 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
       setPageState("success");
     } catch {
       setSubmitError(
-        "Não foi possível enviar o pedido. Verifique sua conexão e tente novamente.",
+        "NÃ£o foi possÃ­vel enviar o pedido. Verifique sua conexÃ£o e tente novamente.",
       );
       setPageState("review");
     }
   }
 
-  function handleBack() {
-    router.push(`/catalog/${storeSlug}`);
-  }
-
-  function handleNewOrder() {
-    router.push(`/catalog/${storeSlug}`);
-  }
-
-  // ── Render: loading / redirecting ─────────────────────────────────────────
+  // â”€â”€ Render: loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (pageState === "loading") {
     return (
       <div className="min-h-dvh bg-surface-subtle flex items-center justify-center">
@@ -309,24 +446,25 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
     );
   }
 
-  // ── Render: success ───────────────────────────────────────────────────────
+  // â”€â”€ Render: success â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (pageState === "success" && confirmation) {
     return (
       <SuccessView
         confirmation={confirmation}
-        storeSlug={storeSlug}
-        onNewOrder={handleNewOrder}
+        onNewOrder={() => router.push(`/catalog/${storeSlug}`)}
       />
     );
   }
 
-  // ── Render: review form ────────────────────────────────────────────────────
+  // â”€â”€ Render: review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const items = cartSession?.items ?? [];
+  const total = items.reduce((s, i) => s + i.lineTotal, 0);
   const isSubmitting = pageState === "submitting";
 
   return (
-    <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-[480px] space-y-8">
-        {/* ── Header ── */}
+    <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-start px-4 py-12">
+      <div className="w-full max-w-[520px] space-y-6">
+        {/* â”€â”€ Header â”€â”€ */}
         <div className="flex flex-col items-center gap-4 text-center">
           <div
             className="flex h-12 w-12 items-center justify-center rounded-xl shadow-sm"
@@ -340,19 +478,27 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
               Revisar pedido
             </h1>
             <p className="text-sm text-foreground-muted">
-              Confira os detalhes antes de confirmar.
+              Ajuste quantidades, adicione mais itens ou confirme.
             </p>
           </div>
         </div>
 
-        {/* ── Main card ── */}
+        {/* â”€â”€ Main card â”€â”€ */}
         <Card>
           <div className="flex flex-col gap-5">
-            {/* Customer */}
+            {/* Customer section */}
             <section aria-labelledby="section-customer">
-              <SectionLabel>
-                <span id="section-customer">Seus dados</span>
-              </SectionLabel>
+              <div className="flex items-center justify-between">
+                <SectionLabel>
+                  <span id="section-customer">Seus dados</span>
+                </SectionLabel>
+                <a
+                  href={`/catalog/${storeSlug}/identificar`}
+                  className="text-xs text-accent hover:underline"
+                >
+                  Alterar
+                </a>
+              </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-foreground-muted">Nome</p>
@@ -363,7 +509,7 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
                 <div>
                   <p className="text-xs text-foreground-muted">WhatsApp</p>
                   <p className="mt-0.5 font-medium text-foreground">
-                    {customer ? formatWhatsApp(customer.whatsapp) : "—"}
+                    {customer ? formatWhatsApp(customer.whatsapp) : "â€”"}
                   </p>
                 </div>
               </div>
@@ -371,16 +517,28 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
 
             <Divider />
 
-            {/* Order items */}
+            {/* Items section */}
             <section aria-labelledby="section-items">
-              <SectionLabel>
-                <span id="section-items">Itens do pedido</span>
-              </SectionLabel>
-              <div className="mt-3 flex flex-col gap-4">
-                {cartItems.map((item, idx) => (
-                  <OrderItemRow
-                    key={`${item.productId}-${item.variantId ?? "base"}-${idx}`}
+              <div className="flex items-center justify-between mb-3">
+                <SectionLabel>
+                  <span id="section-items">Itens ({items.length})</span>
+                </SectionLabel>
+                <a
+                  href={`/catalog/${storeSlug}`}
+                  className="text-xs text-accent hover:underline"
+                >
+                  + Adicionar itens
+                </a>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {items.map((item) => (
+                  <EditableItemRow
+                    key={cartItemKey(item.productId, item.variantId)}
                     item={item}
+                    disabled={isSubmitting}
+                    onQuantityChange={handleQuantityChange}
+                    onRemove={handleRemoveItem}
                   />
                 ))}
               </div>
@@ -390,7 +548,9 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
 
             {/* Total */}
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-foreground">Total</p>
+              <p className="text-sm font-semibold text-foreground">
+                Total do pedido
+              </p>
               <p className="text-base font-bold text-foreground">
                 {formatCurrency(total)}
               </p>
@@ -403,23 +563,21 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
               <SectionLabel>
                 <span id="section-delivery">Data de entrega</span>
               </SectionLabel>
-              <div className="mt-3">
-                <input
-                  id="deliveryDate"
-                  type="date"
-                  value={deliveryDate}
-                  min={tomorrowISO()}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  disabled={isSubmitting}
-                  className={[
-                    "w-full rounded-lg border px-3 py-2 text-sm",
-                    "border-line bg-surface text-foreground",
-                    "focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                    "transition-colors duration-150",
-                  ].join(" ")}
-                />
-              </div>
+              <input
+                id="deliveryDate"
+                type="date"
+                value={deliveryDate}
+                min={tomorrowISO()}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                disabled={isSubmitting}
+                className={[
+                  "mt-2 w-full rounded-lg border px-3 py-2 text-sm",
+                  "border-line bg-surface text-foreground",
+                  "focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "transition-colors duration-150",
+                ].join(" ")}
+              />
             </section>
 
             {/* Shipping address (optional) */}
@@ -432,23 +590,21 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
                   </span>
                 </span>
               </SectionLabel>
-              <div className="mt-3">
-                <input
-                  id="shippingAddress"
-                  type="text"
-                  placeholder="Rua, número, bairro, cidade…"
-                  value={shippingAddress}
-                  onChange={(e) => setShippingAddress(e.target.value)}
-                  disabled={isSubmitting}
-                  className={[
-                    "w-full rounded-lg border px-3 py-2 text-sm",
-                    "border-line bg-surface text-foreground placeholder:text-foreground-muted",
-                    "focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                    "transition-colors duration-150",
-                  ].join(" ")}
-                />
-              </div>
+              <input
+                id="shippingAddress"
+                type="text"
+                placeholder="Rua, número, bairro, cidade…"
+                value={shippingAddress}
+                onChange={(e) => setShippingAddress(e.target.value)}
+                disabled={isSubmitting}
+                className={[
+                  "mt-2 w-full rounded-lg border px-3 py-2 text-sm",
+                  "border-line bg-surface text-foreground placeholder:text-foreground-muted",
+                  "focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "transition-colors duration-150",
+                ].join(" ")}
+              />
             </section>
 
             {/* Error banner */}
@@ -467,19 +623,21 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
                 variant="primary"
                 size="lg"
                 loading={isSubmitting}
-                disabled={isSubmitting}
+                disabled={isSubmitting || items.length === 0}
                 onClick={handleConfirm}
               >
-                {isSubmitting ? "Enviando pedido…" : "Confirmar pedido"}
+                {isSubmitting
+                  ? "Enviando pedido…"
+                  : `Confirmar pedido ${formatCurrency(total)}`}
               </Button>
 
               <Button
                 variant="ghost"
                 size="md"
                 disabled={isSubmitting}
-                onClick={handleBack}
+                onClick={() => router.push(`/catalog/${storeSlug}`)}
               >
-                ← Voltar e ajustar
+                ← Voltar ao catálogo
               </Button>
             </div>
           </div>
@@ -489,7 +647,7 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
   );
 }
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
