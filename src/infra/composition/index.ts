@@ -36,6 +36,7 @@ import { PrismaCatalogRepository } from "@/infra/repositories/PrismaCatalogRepos
 import { PrismaCustomerRepository } from "@/infra/repositories/PrismaCustomerRepository";
 import { PrismaOrderRepository } from "@/infra/repositories/PrismaOrderRepository";
 import { PrismaOrderItemRepository } from "@/infra/repositories/PrismaOrderItemRepository";
+import { PrismaStoreScheduleRepository } from "@/infra/repositories/PrismaStoreScheduleRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -51,6 +52,8 @@ import { UpdateVariantUseCase } from "@/application/product/UpdateVariantUseCase
 import { DeleteVariantUseCase } from "@/application/product/DeleteVariantUseCase";
 import { GetStoreCatalogUseCase } from "@/application/catalog/GetStoreCatalogUseCase";
 import { PlaceOrderService } from "@/application/order/PlaceOrderService";
+import { GetStoreScheduleUseCase } from "@/application/schedule/GetStoreScheduleUseCase";
+import { SetDayAvailabilityUseCase } from "@/application/schedule/SetDayAvailabilityUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -58,6 +61,7 @@ import { AuthController } from "@/controllers/http/AuthController";
 import { ProductController } from "@/controllers/http/ProductController";
 import { ProductVariantController } from "@/controllers/http/ProductVariantController";
 import { PlaceOrderController } from "@/controllers/http/PlaceOrderController";
+import { StoreScheduleController } from "@/controllers/http/StoreScheduleController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -71,6 +75,7 @@ const catalogRepo = new PrismaCatalogRepository();
 const customerRepo = new PrismaCustomerRepository();
 const orderRepo = new PrismaOrderRepository();
 const orderItemRepo = new PrismaOrderItemRepository();
+const scheduleRepo = new PrismaStoreScheduleRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
@@ -125,3 +130,13 @@ export { listProductsUseCase, getProductByIdUseCase };
  * Repository singletons — available for direct import in future use cases.
  */
 export { customerRepo, orderRepo, orderItemRepo };
+
+// ─── Schedule ─────────────────────────────────────────────────────────────────
+
+const getStoreScheduleUseCase = new GetStoreScheduleUseCase(scheduleRepo);
+const setDayAvailabilityUseCase = new SetDayAvailabilityUseCase(scheduleRepo);
+
+export const storeScheduleController = new StoreScheduleController(
+  getStoreScheduleUseCase,
+  setDayAvailabilityUseCase,
+);

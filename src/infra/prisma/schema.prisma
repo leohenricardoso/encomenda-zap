@@ -24,6 +24,7 @@ model Store {
   products  Product[]
   customers Customer[]
   orders    Order[]
+  schedules StoreSchedule[]
 
   @@index([slug])
   @@map("stores")
@@ -231,4 +232,37 @@ model OrderItem {
   /// Fetch all items for a given order efficiently.
   @@index([orderId])
   @@map("order_items")
+}
+
+// ─── StoreSchedule ────────────────────────────────────────────────────────────
+// Per-store override table for day availability.
+//
+// Design: this table records ONLY explicit overrides from the default rule.
+// Default rule (applied in the application layer, not the DB):
+//   Monday–Friday  → isOpen = true
+//   Saturday–Sunday → isOpen = false
+//
+// When a date is absent from this table the application falls back to the
+// default.  Rows are inserted (or upserted) only when an admin explicitly
+// opens or closes a specific date.
+//
+// date: stored as a YYYY-MM-DD string to avoid timezone ambiguity.
+//       Queries always compare strings, never cast to timestamp.
+//
+// @@unique([storeId, date]) prevents duplicate overrides and is the upsert key.
+
+model StoreSchedule {
+  id        String   @id @default(uuid())
+  storeId   String
+  /// Calendar date in YYYY-MM-DD format (e.g. "2026-03-15").
+  date      String
+  isOpen    Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, date])
+  @@index([storeId])
+  @@map("store_schedules")
 }
