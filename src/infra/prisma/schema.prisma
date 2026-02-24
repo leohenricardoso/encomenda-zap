@@ -23,6 +23,7 @@ model Store {
   admin     Admin?
   products  Product[]
   customers Customer[]
+  orders    Order[]
 
   @@index([slug])
   @@map("stores")
@@ -127,10 +128,60 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  store Store @relation(fields: [storeId], references: [id])
+  store  Store   @relation(fields: [storeId], references: [id])
+  orders Order[]
 
   /// One customer per WhatsApp number per store.
   @@unique([whatsapp, storeId])
   @@index([storeId])
   @@map("customers")
+}
+
+// ─── OrderStatus ──────────────────────────────────────────────────────────────
+// Lifecycle states of an Order — mirrors the domain enum in Order.ts.
+// Adding a new status requires:
+//   1. New enum value here.
+//   2. New entry in ALLOWED_TRANSITIONS (Order.ts).
+//   3. A schema migration.
+
+enum OrderStatus {
+  PENDING   // Created, awaiting store review.
+  APPROVED  // Store accepted the order.
+  REJECTED  // Store declined the order.
+}
+
+// ─── Order ────────────────────────────────────────────────────────────────────
+// A purchase request placed by a Customer at a Store.
+//
+// shippingAddress: nullable — null means pickup at the store.
+// deliveryDate:    when the order should be ready / delivered.
+// status:          starts as PENDING; transitions controlled by domain rules.
+//
+// Future relations to add as features grow:
+//   items         OrderItem[]      — line items (product/variant + qty + price)
+//   statusHistory OrderStatusLog[] — full audit trail of transitions
+//   payment       Payment?         — payment intent / confirmation
+
+model Order {
+  id              String      @id @default(uuid())
+  storeId         String
+  customerId      String
+  deliveryDate    DateTime
+  /// Null for pickup orders. Free text for MVP; normalise to Address later.
+  shippingAddress String?
+  /// Current lifecycle state. Always starts as PENDING.
+  status          OrderStatus @default(PENDING)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  store    Store    @relation(fields: [storeId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  /// Query orders by store, filtered by status (dashboard, KPIs).
+  @@index([storeId, status])
+  /// Query all orders for a customer within a store (order history).
+  @@index([customerId, storeId])
+  /// Query by delivery date for scheduling / dispatch views.
+  @@index([storeId, deliveryDate])
+  @@map("orders")
 }
