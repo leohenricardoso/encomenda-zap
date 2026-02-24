@@ -38,6 +38,11 @@ export interface CartSession {
   items: CartItem[];
   /** Optional delivery address — collected on the review screen */
   shippingAddress: string | null;
+  /**
+   * Selected delivery date — YYYY-MM-DD string.
+   * Set on the /pedido/data step before the review screen.
+   */
+  deliveryDate: string | null;
 }
 
 // ─── Key helpers ──────────────────────────────────────────────────────────────
@@ -97,7 +102,7 @@ export function addOrUpdateItem(
   const base: CartSession =
     prev && prev.storeSlug === storeSlug
       ? prev
-      : { storeSlug, items: [], shippingAddress: null };
+      : { storeSlug, items: [], shippingAddress: null, deliveryDate: null };
 
   const key = cartItemKey(incoming.productId, incoming.variantId);
   const exists = base.items.some((i) => itemKey(i) === key);
@@ -176,4 +181,15 @@ export function cartTotalQty(cart: CartSession | null): number {
 /** Grand total price of the cart. */
 export function cartGrandTotal(cart: CartSession | null): number {
   return cart?.items.reduce((s, i) => s + i.lineTotal, 0) ?? 0;
+}
+
+/**
+ * Sets (or clears) the chosen delivery date on the cart.
+ * Returns a new CartSession — does not call writeCart.
+ */
+export function setDeliveryDate(
+  cart: CartSession,
+  date: string | null,
+): CartSession {
+  return { ...cart, deliveryDate: date };
 }

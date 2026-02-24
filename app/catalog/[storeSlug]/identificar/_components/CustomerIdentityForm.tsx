@@ -140,8 +140,8 @@ export function CustomerIdentityForm({ storeSlug, storeName }: Props) {
       // Continue anyway — the order-review page can prompt again if needed
     }
 
-    // Navigate to the order review step
-    router.push(`/catalog/${storeSlug}/pedido/revisar`);
+    // Navigate to the date-selection step
+    router.push(`/catalog/${storeSlug}/pedido/data`);
   }
 
   // ─── Render ─────────────────────────────────────────────────────────────────

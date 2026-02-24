@@ -94,7 +94,7 @@ export function CartFloatingBar({ storeSlug }: CartFloatingBarProps) {
   function handleView() {
     const identified = Boolean(sessionStorage.getItem(CUSTOMER_SESSION_KEY));
     if (identified) {
-      router.push(`/catalog/${storeSlug}/pedido/revisar`);
+      router.push(`/catalog/${storeSlug}/pedido/data`);
     } else {
       router.push(`/catalog/${storeSlug}/identificar`);
     }

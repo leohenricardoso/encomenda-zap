@@ -122,15 +122,15 @@ export function OrderProductSection({
     writeCart(next);
     syncFromCart(); // reflect badge immediately
 
-    // // Optimistically navigate when customer is already identified
-    // const alreadyIdentified = Boolean(
-    //   sessionStorage.getItem(CUSTOMER_SESSION_KEY),
-    // );
-    // if (alreadyIdentified) {
-    //   router.push(`/catalog/${storeSlug}/pedido/revisar`);
-    // } else {
-    //   router.push(`/catalog/${storeSlug}/identificar`);
-    // }
+    // Optimistically navigate when customer is already identified
+    const alreadyIdentified = Boolean(
+      sessionStorage.getItem(CUSTOMER_SESSION_KEY),
+    );
+    if (alreadyIdentified) {
+      router.push(`/catalog/${storeSlug}/pedido/data`);
+    } else {
+      router.push(`/catalog/${storeSlug}/identificar`);
+    }
   }
 
   function handleRemove() {

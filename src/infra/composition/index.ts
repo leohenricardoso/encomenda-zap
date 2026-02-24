@@ -148,6 +148,8 @@ export const storeScheduleController = new StoreScheduleController(
   setDayAvailabilityUseCase,
 );
 
+export { getStoreScheduleUseCase };
+
 // ─── Pickup Slots ───────────────────────────────────────────────────────────
 
 const listPickupSlotsUseCase = new ListPickupSlotsUseCase(pickupSlotRepo);

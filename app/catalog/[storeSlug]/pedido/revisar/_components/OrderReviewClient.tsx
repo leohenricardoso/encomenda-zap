@@ -351,9 +351,15 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
       router.replace(`/catalog/${storeSlug}`);
       return;
     }
+    if (!cart.deliveryDate) {
+      // Date step was skipped — send the user there first
+      router.replace(`/catalog/${storeSlug}/pedido/data`);
+      return;
+    }
 
     setCustomer(JSON.parse(rawCustomer) as CustomerSession);
     setCartSession(cart);
+    setDeliveryDate(cart.deliveryDate!); // non-null: guarded by redirect above
     if (cart.shippingAddress) setShippingAddress(cart.shippingAddress);
     setPageState("review");
   }, [storeSlug, router]);
@@ -560,24 +566,20 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
 
             {/* Delivery date */}
             <section aria-labelledby="section-delivery">
-              <SectionLabel>
-                <span id="section-delivery">Data de entrega</span>
-              </SectionLabel>
-              <input
-                id="deliveryDate"
-                type="date"
-                value={deliveryDate}
-                min={tomorrowISO()}
-                onChange={(e) => setDeliveryDate(e.target.value)}
-                disabled={isSubmitting}
-                className={[
-                  "mt-2 w-full rounded-lg border px-3 py-2 text-sm",
-                  "border-line bg-surface text-foreground",
-                  "focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "transition-colors duration-150",
-                ].join(" ")}
-              />
+              <div className="flex items-center justify-between">
+                <SectionLabel>
+                  <span id="section-delivery">Data de entrega</span>
+                </SectionLabel>
+                <a
+                  href={`/catalog/${storeSlug}/pedido/data`}
+                  className="text-xs text-accent hover:underline"
+                >
+                  Alterar
+                </a>
+              </div>
+              <div className="mt-3 rounded-lg border border-line bg-surface-subtle px-3 py-2.5 text-sm font-medium text-foreground capitalize">
+                {formatDeliveryDate(deliveryDate)}
+              </div>
             </section>
 
             {/* Shipping address (optional) */}
