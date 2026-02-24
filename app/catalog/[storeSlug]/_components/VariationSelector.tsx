@@ -64,10 +64,9 @@ export function VariationSelector({
                 "rounded-full border px-3 py-1 text-xs font-medium",
                 "transition-colors duration-100 ring-focus",
                 isSelected
-                  ? "border-accent bg-accent text-white"
+                  ? "border-2 bg-green-500 text-white"
                   : "border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]",
                 "text-[rgb(var(--color-text))]",
-                isSelected ? "text-white" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}

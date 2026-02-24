@@ -122,15 +122,15 @@ export function OrderProductSection({
     writeCart(next);
     syncFromCart(); // reflect badge immediately
 
-    // Optimistically navigate when customer is already identified
-    const alreadyIdentified = Boolean(
-      sessionStorage.getItem(CUSTOMER_SESSION_KEY),
-    );
-    if (alreadyIdentified) {
-      router.push(`/catalog/${storeSlug}/pedido/revisar`);
-    } else {
-      router.push(`/catalog/${storeSlug}/identificar`);
-    }
+    // // Optimistically navigate when customer is already identified
+    // const alreadyIdentified = Boolean(
+    //   sessionStorage.getItem(CUSTOMER_SESSION_KEY),
+    // );
+    // if (alreadyIdentified) {
+    //   router.push(`/catalog/${storeSlug}/pedido/revisar`);
+    // } else {
+    //   router.push(`/catalog/${storeSlug}/identificar`);
+    // }
   }
 
   function handleRemove() {
@@ -181,7 +181,7 @@ export function OrderProductSection({
                   "rounded-full border px-3 py-1 text-xs font-medium ring-focus",
                   "transition-colors duration-100",
                   isSelected
-                    ? "border-accent bg-accent text-white"
+                    ? "border-accent bg-gray-600 text-white"
                     : "border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] text-[rgb(var(--color-text))]",
                 ].join(" ")}
               >
