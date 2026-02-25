@@ -38,6 +38,7 @@ import { PrismaOrderRepository } from "@/infra/repositories/PrismaOrderRepositor
 import { PrismaOrderItemRepository } from "@/infra/repositories/PrismaOrderItemRepository";
 import { PrismaStoreScheduleRepository } from "@/infra/repositories/PrismaStoreScheduleRepository";
 import { PrismaPickupSlotRepository } from "@/infra/repositories/PrismaPickupSlotRepository";
+import { PrismaCepRangeRepository } from "@/infra/repositories/PrismaCepRangeRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -59,6 +60,10 @@ import { ListPickupSlotsUseCase } from "@/application/pickupSlot/ListPickupSlots
 import { CreatePickupSlotUseCase } from "@/application/pickupSlot/CreatePickupSlotUseCase";
 import { TogglePickupSlotUseCase } from "@/application/pickupSlot/TogglePickupSlotUseCase";
 import { GetPublicPickupSlotsUseCase } from "@/application/pickupSlot/GetPublicPickupSlotsUseCase";
+import { GetCepRangeUseCase } from "@/application/cepRange/GetCepRangeUseCase";
+import { AddCepRangeUseCase } from "@/application/cepRange/UpsertCepRangeUseCase";
+import { DeleteCepRangeUseCase } from "@/application/cepRange/DeleteCepRangeUseCase";
+import { ValidateCepUseCase } from "@/application/cepRange/ValidateCepUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -68,6 +73,7 @@ import { ProductVariantController } from "@/controllers/http/ProductVariantContr
 import { PlaceOrderController } from "@/controllers/http/PlaceOrderController";
 import { StoreScheduleController } from "@/controllers/http/StoreScheduleController";
 import { StorePickupSlotController } from "@/controllers/http/StorePickupSlotController";
+import { StoreCepRangeController } from "@/controllers/http/StoreCepRangeController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -83,6 +89,7 @@ const orderRepo = new PrismaOrderRepository();
 const orderItemRepo = new PrismaOrderItemRepository();
 const scheduleRepo = new PrismaStoreScheduleRepository();
 const pickupSlotRepo = new PrismaPickupSlotRepository();
+const cepRangeRepo = new PrismaCepRangeRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
@@ -166,3 +173,19 @@ export const storePickupSlotController = new StorePickupSlotController(
   togglePickupSlotUseCase,
   getPublicPickupSlotsUseCase,
 );
+
+// ─── CEP Range ─────────────────────────────────────────────────────────────────
+
+const getCepRangeUseCase = new GetCepRangeUseCase(cepRangeRepo);
+const addCepRangeUseCase = new AddCepRangeUseCase(cepRangeRepo);
+const deleteCepRangeUseCase = new DeleteCepRangeUseCase(cepRangeRepo);
+const validateCepUseCase = new ValidateCepUseCase(catalogRepo, cepRangeRepo);
+
+export const storeCepRangeController = new StoreCepRangeController(
+  getCepRangeUseCase,
+  addCepRangeUseCase,
+  deleteCepRangeUseCase,
+  validateCepUseCase,
+);
+
+export { getCepRangeUseCase };

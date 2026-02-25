@@ -26,6 +26,7 @@ model Store {
   orders      Order[]
   schedules   StoreSchedule[]
   pickupSlots StorePickupSlot[]
+  cepRanges   StoreCepRange[]
 
   @@index([slug])
   @@map("stores")
@@ -298,4 +299,30 @@ model StorePickupSlot {
 
   @@index([storeId, dayOfWeek])
   @@map("store_pickup_slots")
+}
+
+// ─── StoreCepRange ─────────────────────────────────────────────────────────────────
+// Delivery constraint — a store may define multiple CEP (postal code) ranges.
+// A customer CEP is accepted if it falls within ANY configured range.
+//
+// Design notes:
+// ─ Multiple rows per store (1:N); storeId is indexed, not unique.
+// ─ cepStart / cepEnd are 8-digit numeric strings (no hyphen, zero-padded).
+//   Lexicographic comparison is valid because strings are fixed-width.
+// ─ When no rows exist for a store, delivery is unrestricted.
+
+model StoreCepRange {
+  id        String   @id @default(uuid())
+  storeId   String
+  /// First CEP of the delivery range. 8 digits, no hyphen (e.g. "01310000").
+  cepStart  String
+  /// Last CEP of the delivery range. 8 digits, no hyphen (e.g. "01319999").
+  cepEnd    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@map("store_cep_ranges")
 }

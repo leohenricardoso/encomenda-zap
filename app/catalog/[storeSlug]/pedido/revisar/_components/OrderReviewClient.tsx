@@ -147,7 +147,7 @@ function EditableItemRow({
           </button>
           <span
             aria-live="polite"
-            className="min-w-[1.75rem] text-center text-sm font-semibold text-foreground"
+            className="min-w-7 text-center text-sm font-semibold text-foreground"
           >
             {item.quantity}
           </span>
@@ -205,7 +205,7 @@ interface SuccessViewProps {
 function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
   return (
     <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-[480px] space-y-8">
+      <div className="w-full max-w-120 space-y-8">
         <div className="flex flex-col items-center gap-4 text-center">
           <div
             className="flex h-14 w-14 items-center justify-center rounded-xl shadow-sm"
@@ -332,7 +332,11 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
   const [customer, setCustomer] = useState<CustomerSession | null>(null);
   const [cartSession, setCartSession] = useState<CartSession | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<string>(tomorrowISO());
-  const [shippingAddress, setShippingAddress] = useState<string>("");
+  const [fulfillmentType, setFulfillmentTypeState] = useState<
+    "pickup" | "delivery"
+  >("pickup");
+  const [shippingCep, setShippingCepState] = useState<string | null>(null);
+  const [pickupTime, setPickupTimeState] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(
     null,
@@ -360,7 +364,9 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
     setCustomer(JSON.parse(rawCustomer) as CustomerSession);
     setCartSession(cart);
     setDeliveryDate(cart.deliveryDate!); // non-null: guarded by redirect above
-    if (cart.shippingAddress) setShippingAddress(cart.shippingAddress);
+    if (cart.fulfillmentType) setFulfillmentTypeState(cart.fulfillmentType);
+    if (cart.shippingCep) setShippingCepState(cart.shippingCep);
+    if (cart.pickupTime) setPickupTimeState(cart.pickupTime);
     setPageState("review");
   }, [storeSlug, router]);
 
@@ -417,7 +423,8 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
             variantId: item.variantId ?? null,
             quantity: item.quantity,
           })),
-          shippingAddress: shippingAddress.trim() || null,
+          shippingAddress:
+            fulfillmentType === "delivery" ? (shippingCep ?? null) : null,
           deliveryDate: new Date(`${deliveryDate}T12:00:00`).toISOString(),
         }),
       });
@@ -469,7 +476,7 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
 
   return (
     <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-start px-4 py-12">
-      <div className="w-full max-w-[520px] space-y-6">
+      <div className="w-full max-w-130 space-y-6">
         {/* â”€â”€ Header â”€â”€ */}
         <div className="flex flex-col items-center gap-4 text-center">
           <div
@@ -567,9 +574,31 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
             {/* Delivery date */}
             <section aria-labelledby="section-delivery">
               <div className="flex items-center justify-between">
-                <SectionLabel>
-                  <span id="section-delivery">Data de entrega</span>
-                </SectionLabel>
+                <div className="flex items-center gap-2">
+                  <SectionLabel>
+                    <span id="section-delivery">
+                      {fulfillmentType === "pickup"
+                        ? "Retirada na loja"
+                        : "Entrega em domicílio"}
+                    </span>
+                  </SectionLabel>
+                  <span
+                    className={[
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      fulfillmentType === "pickup"
+                        ? "bg-accent/10 text-accent"
+                        : "bg-surface-hover text-foreground-muted",
+                    ].join(" ")}
+                    aria-hidden="true"
+                  >
+                    {fulfillmentType === "pickup" ? (
+                      <StoreIcon className="h-3 w-3" />
+                    ) : (
+                      <TruckIcon className="h-3 w-3" />
+                    )}
+                    {fulfillmentType === "pickup" ? "Retirada" : "Entrega"}
+                  </span>
+                </div>
                 <a
                   href={`/catalog/${storeSlug}/pedido/data`}
                   className="text-xs text-accent hover:underline"
@@ -580,33 +609,28 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
               <div className="mt-3 rounded-lg border border-line bg-surface-subtle px-3 py-2.5 text-sm font-medium text-foreground capitalize">
                 {formatDeliveryDate(deliveryDate)}
               </div>
-            </section>
-
-            {/* Shipping address (optional) */}
-            <section aria-labelledby="section-address">
-              <SectionLabel>
-                <span id="section-address">
-                  Endereço de entrega{" "}
-                  <span className="normal-case font-normal text-foreground-muted tracking-normal">
-                    (opcional)
+              {fulfillmentType === "pickup" && pickupTime && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
+                  <ClockIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
+                  <span>
+                    Horário:{" "}
+                    <span className="font-medium text-foreground">
+                      {pickupTime}
+                    </span>
                   </span>
-                </span>
-              </SectionLabel>
-              <input
-                id="shippingAddress"
-                type="text"
-                placeholder="Rua, número, bairro, cidade…"
-                value={shippingAddress}
-                onChange={(e) => setShippingAddress(e.target.value)}
-                disabled={isSubmitting}
-                className={[
-                  "mt-2 w-full rounded-lg border px-3 py-2 text-sm",
-                  "border-line bg-surface text-foreground placeholder:text-foreground-muted",
-                  "focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "transition-colors duration-150",
-                ].join(" ")}
-              />
+                </div>
+              )}
+              {fulfillmentType === "delivery" && shippingCep && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
+                  <TruckIcon className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    CEP{" "}
+                    <span className="font-medium text-foreground">
+                      {shippingCep}
+                    </span>
+                  </span>
+                </div>
+              )}
             </section>
 
             {/* Error banner */}
@@ -679,6 +703,65 @@ function CheckIcon({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+function StoreIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  );
+}
+
+function TruckIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="1" y="3" width="15" height="13" rx="1" />
+      <path d="M16 8h4l3 3v5h-7V8z" />
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="18.5" cy="18.5" r="2.5" />
+    </svg>
+  );
+}
+
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
     </svg>
   );
 }

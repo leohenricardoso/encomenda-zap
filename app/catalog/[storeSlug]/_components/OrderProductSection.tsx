@@ -181,7 +181,7 @@ export function OrderProductSection({
                   "rounded-full border px-3 py-1 text-xs font-medium ring-focus",
                   "transition-colors duration-100",
                   isSelected
-                    ? "border-accent bg-gray-600 text-white"
+                    ? "bg-gray-200 border-2 border-black"
                     : "border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] text-[rgb(var(--color-text))]",
                 ].join(" ")}
               >

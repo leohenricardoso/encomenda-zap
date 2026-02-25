@@ -36,13 +36,34 @@ export interface CartItem {
 export interface CartSession {
   storeSlug: string;
   items: CartItem[];
-  /** Optional delivery address — collected on the review screen */
+  /** Optional delivery address — kept for backward compat, use shippingCep for delivery */
   shippingAddress: string | null;
   /**
    * Selected delivery date — YYYY-MM-DD string.
    * Set on the /pedido/data step before the review screen.
    */
   deliveryDate: string | null;
+  /**
+   * Whether the customer wants pickup at the store or home delivery.
+   * Defaults to "pickup".
+   */
+  fulfillmentType: "pickup" | "delivery";
+  /**
+   * CEP (postal code) for home delivery.
+   * Only relevant when fulfillmentType === "delivery".
+   */
+  shippingCep: string | null;
+  /**
+   * ID of the chosen StorePickupSlot.
+   * Only relevant when fulfillmentType === "pickup".
+   */
+  pickupSlotId: string | null;
+  /**
+   * Human-readable time label for the chosen slot, e.g. "09:00 – 12:00".
+   * Stored alongside the ID so the review screen can display it without
+   * an extra fetch.
+   */
+  pickupTime: string | null;
 }
 
 // ─── Key helpers ──────────────────────────────────────────────────────────────
@@ -102,7 +123,16 @@ export function addOrUpdateItem(
   const base: CartSession =
     prev && prev.storeSlug === storeSlug
       ? prev
-      : { storeSlug, items: [], shippingAddress: null, deliveryDate: null };
+      : {
+          storeSlug,
+          items: [],
+          shippingAddress: null,
+          deliveryDate: null,
+          fulfillmentType: "pickup",
+          shippingCep: null,
+          pickupSlotId: null,
+          pickupTime: null,
+        };
 
   const key = cartItemKey(incoming.productId, incoming.variantId);
   const exists = base.items.some((i) => itemKey(i) === key);
@@ -192,4 +222,40 @@ export function setDeliveryDate(
   date: string | null,
 ): CartSession {
   return { ...cart, deliveryDate: date };
+}
+
+/**
+ * Sets the fulfillment type (pickup at store or home delivery).
+ * Returns a new CartSession — does not call writeCart.
+ */
+export function setFulfillmentType(
+  cart: CartSession,
+  type: "pickup" | "delivery",
+): CartSession {
+  return { ...cart, fulfillmentType: type };
+}
+
+/**
+ * Sets (or clears) the CEP for home delivery.
+ * Returns a new CartSession — does not call writeCart.
+ */
+export function setShippingCep(
+  cart: CartSession,
+  cep: string | null,
+): CartSession {
+  return { ...cart, shippingCep: cep };
+}
+
+/**
+ * Sets (or clears) the chosen pickup slot.
+ * Stores both the slot ID (for backend) and a human-readable time label
+ * (for display on the review screen without an extra fetch).
+ * Returns a new CartSession — does not call writeCart.
+ */
+export function setPickupSlot(
+  cart: CartSession,
+  slotId: string | null,
+  timeLabel: string | null,
+): CartSession {
+  return { ...cart, pickupSlotId: slotId, pickupTime: timeLabel };
 }
