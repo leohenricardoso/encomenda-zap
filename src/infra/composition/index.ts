@@ -174,6 +174,8 @@ export const storePickupSlotController = new StorePickupSlotController(
   getPublicPickupSlotsUseCase,
 );
 
+export { listPickupSlotsUseCase };
+
 // ─── CEP Range ─────────────────────────────────────────────────────────────────
 
 const getCepRangeUseCase = new GetCepRangeUseCase(cepRangeRepo);

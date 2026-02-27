@@ -237,8 +237,8 @@ export function DatePickerClient({
     let cancelled = false;
     setSlotsLoading(true);
     fetch(`/api/catalog/${storeSlug}/pickup-slots?dayOfWeek=${dow}`)
-      .then((r) => r.json() as Promise<{ slots: PickupSlot[] }>)
-      .then(({ slots }) => {
+      .then((r) => r.json() as Promise<{ success: boolean; data: { slots: PickupSlot[] } }>)
+      .then(({ data: { slots } }) => {
         if (cancelled) return;
         setPickupSlots(slots.filter((s) => s.isActive));
         // Keep previously chosen slot only if it's still valid for this day

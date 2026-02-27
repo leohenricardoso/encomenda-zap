@@ -6,8 +6,12 @@
  */
 
 import { getSession } from "@/infra/http/auth/getSession";
-import { getStoreScheduleUseCase } from "@/infra/composition";
+import {
+  getStoreScheduleUseCase,
+  listPickupSlotsUseCase,
+} from "@/infra/composition";
 import { AgendaCalendar } from "./_components/AgendaCalendar";
+import { PickupSlotsPanel } from "./_components/PickupSlotsPanel";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -31,11 +35,17 @@ export default async function AgendaPage() {
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth(); // 0-based
 
-  const { days } = await getStoreScheduleUseCase.execute({
-    storeId: session.storeId,
-    from: firstDayOfMonth(year, month),
-    to: lastDayOfMonth(year, month),
-  });
+  const [{ days }, { slots }] = await Promise.all([
+    getStoreScheduleUseCase.execute({
+      storeId: session.storeId,
+      from: firstDayOfMonth(year, month),
+      to: lastDayOfMonth(year, month),
+    }),
+    listPickupSlotsUseCase.execute({
+      storeId: session.storeId,
+      activeOnly: false,
+    }),
+  ]);
 
   return (
     <div className="px-4 py-8 sm:px-8">
@@ -57,6 +67,9 @@ export default async function AgendaPage() {
           initialYear={year}
           initialMonth={month}
         />
+
+        {/* ── Pickup slots ────────────────────────────────────────────────── */}
+        <PickupSlotsPanel initialSlots={slots} />
       </div>
     </div>
   );
