@@ -1,9 +1,12 @@
+import { Suspense } from "react";
 import { getSession } from "@/infra/http/auth/getSession";
 import { listOrdersUseCase } from "@/infra/composition";
 import { FulfillmentType, OrderStatus } from "@/domain/order/Order";
-import type { OrderWithDetails } from "@/domain/order/Order";
+import type { OrderWithDetails, OrderFilters } from "@/domain/order/Order";
 import type { OrderViewModel } from "./_components/types";
 import { OrderList } from "./_components/OrderList";
+import { FilterBar } from "./_components/FilterBar";
+import { parseFilters } from "./_lib/filters";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,10 +64,18 @@ function toViewModel(order: OrderWithDetails): OrderViewModel {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getSession();
+  const sp = await searchParams;
 
-  // All dates stored as UTC midnight, so compare against UTC day boundaries.
+  // ── Parse filters from URL ────────────────────────────────────────────────
+  const parsed = parseFilters(sp);
+
+  // Default date range: from today onwards (no upper bound).
   const todayStr = new Date().toISOString().slice(0, 10);
   const startOfToday = new Date(`${todayStr}T00:00:00.000Z`);
   const tomorrowStr = (() => {
@@ -73,9 +84,18 @@ export default async function DashboardPage() {
     return t.toISOString().slice(0, 10);
   })();
 
-  const rawOrders = await listOrdersUseCase.execute(session.storeId, {
-    deliveryDateFrom: startOfToday,
-  });
+  const filters: OrderFilters = {
+    // If the user has no date filter set, default to today onwards.
+    deliveryDateFrom: parsed.from
+      ? new Date(`${parsed.from}T00:00:00.000Z`)
+      : startOfToday,
+    ...(parsed.to && {
+      deliveryDateTo: new Date(`${parsed.to}T23:59:59.999Z`),
+    }),
+    ...(parsed.status && { status: parsed.status }),
+  };
+
+  const rawOrders = await listOrdersUseCase.execute(session.storeId, filters);
   const orders = rawOrders.map(toViewModel);
 
   // ── Group ──────────────────────────────────────────────────────────────────
@@ -110,9 +130,16 @@ export default async function DashboardPage() {
             Encomendas
           </h1>
           <p className="text-sm text-foreground-muted">
-            Seus pedidos a partir de hoje, por data e horário.
+            {parsed.status || parsed.from
+              ? "Resultados filtrados — use os filtros acima para ajustar."
+              : "Seus pedidos a partir de hoje, por data e horário."}
           </p>
         </div>
+
+        {/* ── Filter bar ───────────────────────────────────────────────────── */}
+        <Suspense fallback={<FilterBarSkeleton />}>
+          <FilterBar />
+        </Suspense>
 
         {/* ── KPI row ──────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3">
@@ -172,13 +199,44 @@ export default async function DashboardPage() {
               <BoxIcon className="h-7 w-7 text-foreground-muted" />
             </div>
             <p className="text-base font-medium text-foreground">
-              Sem pedidos por enquanto
+              {parsed.status || parsed.from
+                ? "Nenhum pedido com esses filtros"
+                : "Sem pedidos por enquanto"}
             </p>
             <p className="mt-1 text-sm text-foreground-muted">
-              Os pedidos feitos pelos seus clientes aparecerão aqui.
+              {parsed.status || parsed.from
+                ? "Tente alterar ou limpar os filtros para ver mais resultados."
+                : "Os pedidos feitos pelos seus clientes aparecerão aqui."}
             </p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── FilterBarSkeleton ────────────────────────────────────────────────────────
+
+function FilterBarSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      <div className="flex gap-1.5">
+        {[48, 40, 56, 64].map((w) => (
+          <div
+            key={w}
+            style={{ width: w }}
+            className="h-6 rounded-full bg-surface-hover"
+          />
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        {[40, 68, 68, 68].map((w, i) => (
+          <div
+            key={i}
+            style={{ width: w }}
+            className="h-6 rounded-full bg-surface-hover"
+          />
+        ))}
       </div>
     </div>
   );

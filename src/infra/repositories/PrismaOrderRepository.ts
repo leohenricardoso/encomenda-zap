@@ -42,6 +42,7 @@ export class PrismaOrderRepository implements IOrderRepository {
     deliveryNeighborhood: string | null;
     deliveryCity: string | null;
     shippingAddress: string | null;
+    notes: string | null;
     status: string;
     createdAt: Date;
     updatedAt: Date;
@@ -60,6 +61,7 @@ export class PrismaOrderRepository implements IOrderRepository {
       deliveryNeighborhood: raw.deliveryNeighborhood,
       deliveryCity: raw.deliveryCity,
       shippingAddress: raw.shippingAddress,
+      notes: raw.notes,
       status: raw.status as OrderStatus,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
@@ -242,6 +244,7 @@ export class PrismaOrderRepository implements IOrderRepository {
         deliveryNeighborhood: input.deliveryNeighborhood ?? null,
         deliveryCity: input.deliveryCity ?? null,
         shippingAddress: input.shippingAddress ?? null,
+        notes: input.notes ?? null,
         // status defaults to PENDING via the Prisma model default
       },
     });

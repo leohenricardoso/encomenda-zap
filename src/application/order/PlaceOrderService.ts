@@ -50,6 +50,8 @@ export interface PlaceOrderInput {
    * Must be a future date (strictly after now).
    */
   deliveryDate: Date;
+  /** Optional free-text note from the customer. Stored verbatim, at most 500 chars. */
+  notes?: string | null;
 }
 
 // ─── Output — no internal IDs exposed ────────────────────────────────────────
@@ -91,6 +93,8 @@ export interface PlaceOrderOutput {
   deliveryDate: Date;
   total: number;
   createdAt: Date;
+  /** Optional customer note, forwarded verbatim. */
+  notes: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -354,6 +358,7 @@ export class PlaceOrderService {
       deliveryNeighborhood: input.deliveryNeighborhood ?? null,
       deliveryCity: input.deliveryCity ?? null,
       shippingAddress,
+      notes: input.notes ? input.notes.trim().slice(0, 500) : null,
     });
 
     // ── 7. Create items (backfill orderId now that we have it) ───────────────
@@ -395,6 +400,7 @@ export class PlaceOrderService {
       deliveryDate: order.deliveryDate,
       total: computeOrderTotal(createdItems),
       createdAt: order.createdAt,
+      notes: order.notes,
     };
   }
 }

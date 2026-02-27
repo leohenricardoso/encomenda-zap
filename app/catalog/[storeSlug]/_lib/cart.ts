@@ -72,6 +72,11 @@ export interface CartSession {
    * an extra fetch.
    */
   pickupTime: string | null;
+  /**
+   * Optional free-text note from the customer, written while reviewing the cart.
+   * Forwarded verbatim to the backend on order submission.
+   */
+  notes: string | null;
 }
 
 // ─── Key helpers ──────────────────────────────────────────────────────────────
@@ -144,6 +149,7 @@ export function addOrUpdateItem(
           deliveryCity: null,
           pickupSlotId: null,
           pickupTime: null,
+          notes: null,
         };
 
   const key = cartItemKey(incoming.productId, incoming.variantId);
@@ -295,4 +301,12 @@ export function setPickupSlot(
   timeLabel: string | null,
 ): CartSession {
   return { ...cart, pickupSlotId: slotId, pickupTime: timeLabel };
+}
+
+/**
+ * Sets (or clears) the customer’s optional note for the order.
+ * Returns a new CartSession — does not call writeCart.
+ */
+export function setNotes(cart: CartSession, notes: string | null): CartSession {
+  return { ...cart, notes: notes || null };
 }

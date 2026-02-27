@@ -49,6 +49,7 @@ export class PlaceOrderController {
       deliveryNeighborhood,
       deliveryCity,
       deliveryDate,
+      notes,
     } = body;
 
     // Structural guard: customer must be an object
@@ -121,6 +122,7 @@ export class PlaceOrderController {
             : null,
         deliveryCity: typeof deliveryCity === "string" ? deliveryCity : null,
         deliveryDate: parsedDeliveryDate,
+        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
       });
 
       return created(result);

@@ -518,6 +518,7 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
           deliveryCity:
             fulfillmentType === "delivery" ? deliveryCity || null : null,
           deliveryDate: new Date(`${deliveryDate}T12:00:00`).toISOString(),
+          notes: cartSession.notes ?? null,
         }),
       });
 

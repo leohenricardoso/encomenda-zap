@@ -198,6 +198,8 @@ model Order {
   deliveryCity    String?
   /// Legacy free-text address (kept for backward compat). Populated from structured fields.
   shippingAddress String?
+  /// Optional free-text note left by the customer when placing the order.
+  notes           String?
   /// Current lifecycle state. Always starts as PENDING.
   status          OrderStatus     @default(PENDING)
   createdAt       DateTime        @default(now())

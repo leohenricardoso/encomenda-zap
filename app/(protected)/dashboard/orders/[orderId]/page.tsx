@@ -108,6 +108,21 @@ export default async function OrderDetailPage({ params }: Props) {
           {/* ── Items ─────────────────────────────────────────────────────── */}
           <ItemsSection items={order.items} />
 
+          {/* ── Customer notes ────────────────────────────────────────────── */}
+          {order.notes && (
+            <section
+              aria-label="Observações do cliente"
+              className="rounded-xl border border-line bg-amber-50 px-4 py-4"
+            >
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-amber-700">
+                Observações do cliente
+              </p>
+              <p className="text-sm text-amber-900 whitespace-pre-line leading-relaxed">
+                {order.notes}
+              </p>
+            </section>
+          )}
+
           {/* ── Actions (sm+: rendered inline below items) ────────────────── */}
           <div className="hidden sm:block">
             <StatusActions orderId={order.id} currentStatus={order.status} />

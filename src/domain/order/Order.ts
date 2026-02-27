@@ -118,6 +118,8 @@ export interface Order {
   deliveryCity: string | null;
   /** Legacy free-text address — kept for backward compat. */
   shippingAddress: string | null;
+  /** Optional free-text note written by the customer at order time. */
+  notes: string | null;
   /** Current lifecycle state — always starts as PENDING. */
   status: OrderStatus;
   createdAt: Date;
@@ -141,8 +143,10 @@ export interface CreateOrderInput {
   deliveryNeighborhood?: string | null;
   deliveryCity?: string | null;
   /** Legacy free-text address (auto-computed from structured fields). */
-  shippingAddress?: string | null;
-  /**
+  shippingAddress?:
+    | string
+    | null; /** Optional customer note for the order. Persisted as-is. */
+  notes?: string | null; /**
    * Not accepted here — new orders always start as PENDING (domain invariant).
    * Status is driven exclusively through IOrderRepository.updateStatus().
    */

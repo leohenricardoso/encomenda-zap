@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import type { CatalogProduct, CatalogVariant } from "@/domain/catalog/types";
 import {
   readCart,
@@ -10,7 +9,6 @@ import {
   removeItem,
   cartItemKey,
 } from "../_lib/cart";
-import { CUSTOMER_SESSION_KEY } from "../identificar/_components/CustomerIdentityForm";
 import { PriceDisplay } from "./PriceDisplay";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -46,7 +44,6 @@ export function OrderProductSection({
   product,
   storeSlug,
 }: OrderProductSectionProps) {
-  const router = useRouter();
   const activeVariants = product.variants.filter((v) => v.isActive);
   const hasVariants = activeVariants.length > 0;
 
@@ -55,6 +52,8 @@ export function OrderProductSection({
   );
   const [quantity, setQuantity] = useState(Math.max(product.minQuantity, 1));
   const [validationError, setValidationError] = useState<string | null>(null);
+  /** Briefly true after add — drives the "✓ Adicionado!" feedback. */
+  const [justAdded, setJustAdded] = useState(false);
 
   // How many of THIS item (product+variant) is already in the cart
   const [inCartQty, setInCartQty] = useState<number>(0);
@@ -120,17 +119,14 @@ export function OrderProductSection({
       unitPrice,
     });
     writeCart(next);
-    syncFromCart(); // reflect badge immediately
+    syncFromCart();
 
-    // Optimistically navigate when customer is already identified
-    const alreadyIdentified = Boolean(
-      sessionStorage.getItem(CUSTOMER_SESSION_KEY),
-    );
-    if (alreadyIdentified) {
-      router.push(`/catalog/${storeSlug}/pedido/data`);
-    } else {
-      router.push(`/catalog/${storeSlug}/identificar`);
-    }
+    // Notify CartFloatingBar and CartDrawer on the same page.
+    window.dispatchEvent(new Event("cart:updated"));
+
+    // Brief "Adicionado!" feedback — reverts after 1.5 s.
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
   }
 
   function handleRemove() {
@@ -140,6 +136,7 @@ export function OrderProductSection({
     writeCart(next);
     setInCartQty(0);
     setQuantity(Math.max(product.minQuantity, 1));
+    window.dispatchEvent(new Event("cart:updated"));
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -258,13 +255,19 @@ export function OrderProductSection({
           onClick={handleAddOrUpdate}
           className={[
             "w-full rounded-lg px-4 py-2 text-xs font-semibold ring-focus",
-            "transition-colors duration-150 active:scale-[.98]",
-            isInCart
-              ? "bg-accent/10 text-accent hover:bg-accent/20"
-              : "bg-foreground text-surface hover:bg-foreground/90",
+            "transition-all duration-200 active:scale-[.98]",
+            justAdded
+              ? "bg-green-600 text-white"
+              : isInCart
+                ? "bg-accent/10 text-accent hover:bg-accent/20"
+                : "bg-foreground text-surface hover:bg-foreground/90",
           ].join(" ")}
         >
-          {isInCart ? "Atualizar e ver pedido" : "Adicionar ao pedido"}
+          {justAdded
+            ? "✓ Adicionado!"
+            : isInCart
+              ? "Atualizar quantidade"
+              : "Adicionar ao carrinho"}
         </button>
 
         {isInCart && (

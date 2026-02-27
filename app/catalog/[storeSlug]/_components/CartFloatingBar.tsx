@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { readCart, cartTotalQty, cartGrandTotal } from "../_lib/cart";
-import { CUSTOMER_SESSION_KEY } from "../identificar/_components/CustomerIdentityForm";
+import { CartDrawer } from "./CartDrawer";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,8 +29,7 @@ interface CartFloatingBarProps {
  *    otherwise → /identificar.
  */
 export function CartFloatingBar({ storeSlug }: CartFloatingBarProps) {
-  const router = useRouter();
-
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [totalQty, setTotalQty] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -91,53 +89,78 @@ export function CartFloatingBar({ storeSlug }: CartFloatingBarProps) {
 
   if (!visible) return null;
 
-  function handleView() {
-    const identified = Boolean(sessionStorage.getItem(CUSTOMER_SESSION_KEY));
-    if (identified) {
-      router.push(`/catalog/${storeSlug}/pedido/data`);
-    } else {
-      router.push(`/catalog/${storeSlug}/identificar`);
-    }
-  }
-
   return (
-    <div
-      role="region"
-      aria-label="Resumo do pedido"
-      className={[
-        // Fixed bottom bar — sits above the fold on mobile
-        "fixed bottom-0 left-0 right-0 z-50",
-        "animate-in slide-in-from-bottom duration-300",
-        // Visual chrome
-        "border-t border-line bg-surface/95 backdrop-blur-sm shadow-lg",
-        "px-4 py-3 sm:px-6",
-      ].join(" ")}
-    >
-      <div className="mx-auto flex max-w-screen-xl items-center justify-between gap-4">
-        {/* Cart summary */}
-        <div className="flex flex-col">
-          <span className="text-xs text-foreground-muted">
-            {totalQty} {totalQty === 1 ? "item" : "itens"} no pedido
-          </span>
-          <span className="text-sm font-bold text-foreground">
-            {formatCurrency(grandTotal)}
-          </span>
-        </div>
+    <>
+      <div
+        role="region"
+        aria-label="Resumo do pedido"
+        className={[
+          // Fixed bottom bar — sits above the fold on mobile
+          "fixed bottom-0 left-0 right-0 z-50",
+          "animate-in slide-in-from-bottom duration-300",
+          // Visual chrome
+          "border-t border-line bg-surface/95 backdrop-blur-sm shadow-lg",
+          "px-4 py-3 sm:px-6",
+        ].join(" ")}
+      >
+        <div className="mx-auto flex max-w-screen-xl items-center justify-between gap-4">
+          {/* Cart summary */}
+          <div className="flex items-center gap-3">
+            {/* Cart icon with badge */}
+            <div className="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5 text-foreground"
+                aria-hidden="true"
+              >
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              </svg>
+              {totalQty > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white leading-none">
+                  {totalQty}
+                </span>
+              )}
+            </div>
 
-        {/* CTA */}
-        <button
-          type="button"
-          onClick={handleView}
-          className={[
-            "rounded-xl px-5 py-2.5 text-sm font-semibold",
-            "bg-foreground text-surface",
-            "transition-colors duration-150 hover:bg-foreground/90 active:scale-[.98]",
-            "ring-focus shrink-0",
-          ].join(" ")}
-        >
-          Ver pedido →
-        </button>
+            <div className="flex flex-col">
+              <span className="text-[11px] text-foreground-muted leading-none">
+                {totalQty} {totalQty === 1 ? "item" : "itens"}
+              </span>
+              <span className="text-sm font-bold text-foreground tabular-nums">
+                {formatCurrency(grandTotal)}
+              </span>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className={[
+              "rounded-xl px-5 py-2.5 text-sm font-semibold",
+              "bg-foreground text-surface",
+              "transition-colors duration-150 hover:bg-foreground/90 active:scale-[.98]",
+              "ring-focus shrink-0",
+            ].join(" ")}
+          >
+            Ver carrinho
+          </button>
+        </div>
       </div>
-    </div>
+
+      <CartDrawer
+        storeSlug={storeSlug}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
+    </>
   );
 }
