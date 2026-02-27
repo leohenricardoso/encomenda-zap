@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { OrderViewModel } from "./types";
 import { OrderStatus, FulfillmentType } from "@/domain/order/Order";
 
@@ -140,8 +141,14 @@ export function OrderCard({ order }: OrderCardProps) {
           )}
         </p>
 
-        {/* ── Total ──────────────────────────────────────────────────────── */}
-        <div className="flex justify-end border-t border-line pt-2">
+        {/* ── Total + link ───────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between border-t border-line pt-2">
+          <Link
+            href={`/dashboard/orders/${order.id}`}
+            className="text-xs font-medium text-accent hover:underline"
+          >
+            Ver detalhes →
+          </Link>
           <span className="font-semibold text-foreground tabular-nums">
             {formatCurrency(order.totalAmount)}
           </span>

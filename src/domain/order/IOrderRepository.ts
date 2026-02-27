@@ -32,13 +32,23 @@ export interface IOrderRepository {
   findAllByStore(storeId: string, filters?: OrderFilters): Promise<Order[]>;
 
   /**
-   * Returns orders for the store with customer name and line items joined.
+   * Returns orders for the store with customer info and line items joined.
    * Used by dashboard/agenda views — read-model only, never used in commands.
    */
   findAllByStoreWithDetails(
     storeId: string,
     filters?: OrderFilters,
   ): Promise<OrderWithDetails[]>;
+
+  /**
+   * Returns a single order with full customer info and items loaded.
+   * Used by the order detail page.
+   * Returns null when the order is not found or does not belong to the store.
+   */
+  findByIdWithDetails(
+    id: string,
+    storeId: string,
+  ): Promise<OrderWithDetails | null>;
 
   /**
    * Returns a single order by id, tenant-scoped. Null if not found.

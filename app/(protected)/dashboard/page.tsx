@@ -45,7 +45,9 @@ function toViewModel(order: OrderWithDetails): OrderViewModel {
       : null;
 
   return {
+    id: order.id,
     customerName: order.customerName,
+    customerWhatsapp: order.customerWhatsapp,
     deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
     pickupTime: order.pickupTime,
     fulfillmentType: order.fulfillmentType,

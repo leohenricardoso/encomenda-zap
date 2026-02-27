@@ -158,7 +158,7 @@ export class PrismaOrderRepository implements IOrderRepository {
           : {}),
       },
       include: {
-        customer: { select: { name: true } },
+        customer: { select: { name: true, whatsapp: true } },
         items: { orderBy: { createdAt: "asc" } },
       },
       orderBy: [{ deliveryDate: "asc" }, { pickupTime: "asc" }],
@@ -167,8 +167,29 @@ export class PrismaOrderRepository implements IOrderRepository {
     return rows.map((r) => ({
       ...this.toEntity(r),
       customerName: r.customer.name,
+      customerWhatsapp: r.customer.whatsapp,
       items: r.items.map((item) => this.toItemEntity(item)),
     }));
+  }
+
+  async findByIdWithDetails(
+    id: string,
+    storeId: string,
+  ): Promise<OrderWithDetails | null> {
+    const row = await prisma.order.findFirst({
+      where: { id, storeId },
+      include: {
+        customer: { select: { name: true, whatsapp: true } },
+        items: { orderBy: { createdAt: "asc" } },
+      },
+    });
+    if (!row) return null;
+    return {
+      ...this.toEntity(row),
+      customerName: row.customer.name,
+      customerWhatsapp: row.customer.whatsapp,
+      items: row.items.map((item) => this.toItemEntity(item)),
+    };
   }
 
   async findById(id: string, storeId: string): Promise<Order | null> {
