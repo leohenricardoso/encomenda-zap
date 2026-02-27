@@ -168,6 +168,18 @@ export interface UpdateOrderInput {
 }
 
 /**
+ * OrderWithDetails — Order joined with its customer name and line items.
+ * Used exclusively for read-model views (dashboard, history).
+ * Does NOT replace Order in commands — mutations still operate on bare Order.
+ */
+export interface OrderWithDetails extends Order {
+  /** Snapshot of the customer's name at query time. */
+  customerName: string;
+  /** Line items for this order. */
+  items: import("./OrderItem").OrderItem[];
+}
+
+/**
  * OrderFilters — optional query constraints for findAllByStore.
  *
  * All fields are additive (AND-combined).

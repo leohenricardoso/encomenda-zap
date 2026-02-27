@@ -2,6 +2,7 @@ import { prisma } from "@/infra/prisma";
 import type { IOrderRepository } from "@/domain/order/IOrderRepository";
 import {
   type Order,
+  type OrderWithDetails,
   type CreateOrderInput,
   type UpdateOrderInput,
   type OrderFilters,
@@ -126,6 +127,48 @@ export class PrismaOrderRepository implements IOrderRepository {
     });
 
     return rows.map((r) => this.toEntity(r));
+  }
+
+  async findAllByStoreWithDetails(
+    storeId: string,
+    filters?: OrderFilters,
+  ): Promise<OrderWithDetails[]> {
+    const statusFilter = filters?.status
+      ? {
+          status: Array.isArray(filters.status)
+            ? { in: filters.status }
+            : filters.status,
+        }
+      : {};
+
+    const rows = await prisma.order.findMany({
+      where: {
+        storeId,
+        ...statusFilter,
+        ...(filters?.customerId && { customerId: filters.customerId }),
+        ...(filters?.deliveryDateFrom || filters?.deliveryDateTo
+          ? {
+              deliveryDate: {
+                ...(filters.deliveryDateFrom && {
+                  gte: filters.deliveryDateFrom,
+                }),
+                ...(filters.deliveryDateTo && { lte: filters.deliveryDateTo }),
+              },
+            }
+          : {}),
+      },
+      include: {
+        customer: { select: { name: true } },
+        items: { orderBy: { createdAt: "asc" } },
+      },
+      orderBy: [{ deliveryDate: "asc" }, { pickupTime: "asc" }],
+    });
+
+    return rows.map((r) => ({
+      ...this.toEntity(r),
+      customerName: r.customer.name,
+      items: r.items.map((item) => this.toItemEntity(item)),
+    }));
   }
 
   async findById(id: string, storeId: string): Promise<Order | null> {

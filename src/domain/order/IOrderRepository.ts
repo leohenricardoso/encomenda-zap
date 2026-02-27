@@ -1,6 +1,7 @@
 import type {
   Order,
   OrderStatus,
+  OrderWithDetails,
   CreateOrderInput,
   UpdateOrderInput,
   OrderFilters,
@@ -29,6 +30,15 @@ export interface IOrderRepository {
    * Accepts optional filters for status, customer and date range.
    */
   findAllByStore(storeId: string, filters?: OrderFilters): Promise<Order[]>;
+
+  /**
+   * Returns orders for the store with customer name and line items joined.
+   * Used by dashboard/agenda views — read-model only, never used in commands.
+   */
+  findAllByStoreWithDetails(
+    storeId: string,
+    filters?: OrderFilters,
+  ): Promise<OrderWithDetails[]>;
 
   /**
    * Returns a single order by id, tenant-scoped. Null if not found.
