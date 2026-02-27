@@ -54,6 +54,14 @@ export interface CartSession {
    */
   shippingCep: string | null;
   /**
+   * Structured delivery address fields.
+   * Only relevant when fulfillmentType === "delivery".
+   */
+  deliveryStreet: string | null;
+  deliveryNumber: string | null;
+  deliveryNeighborhood: string | null;
+  deliveryCity: string | null;
+  /**
    * ID of the chosen StorePickupSlot.
    * Only relevant when fulfillmentType === "pickup".
    */
@@ -130,6 +138,10 @@ export function addOrUpdateItem(
           deliveryDate: null,
           fulfillmentType: "pickup",
           shippingCep: null,
+          deliveryStreet: null,
+          deliveryNumber: null,
+          deliveryNeighborhood: null,
+          deliveryCity: null,
           pickupSlotId: null,
           pickupTime: null,
         };
@@ -244,6 +256,31 @@ export function setShippingCep(
   cep: string | null,
 ): CartSession {
   return { ...cart, shippingCep: cep };
+}
+
+/**
+ * Sets structured delivery address fields for home delivery.
+ * Merges only the provided fields; others remain unchanged.
+ * Returns a new CartSession — does not call writeCart.
+ */
+export function setDeliveryAddress(
+  cart: CartSession,
+  address: {
+    street?: string | null;
+    number?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+  },
+): CartSession {
+  return {
+    ...cart,
+    ...(address.street !== undefined && { deliveryStreet: address.street }),
+    ...(address.number !== undefined && { deliveryNumber: address.number }),
+    ...(address.neighborhood !== undefined && {
+      deliveryNeighborhood: address.neighborhood,
+    }),
+    ...(address.city !== undefined && { deliveryCity: address.city }),
+  };
 }
 
 /**

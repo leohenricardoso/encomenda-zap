@@ -155,6 +155,14 @@ enum OrderStatus {
   REJECTED  // Store declined the order.
 }
 
+// ─── FulfillmentType ──────────────────────────────────────────────────────────
+// How the customer wants to receive the order.
+
+enum FulfillmentType {
+  PICKUP    // Customer picks up at the store.
+  DELIVERY  // Order is delivered to the customer's address.
+}
+
 // ─── Order ────────────────────────────────────────────────────────────────────
 // A purchase request placed by a Customer at a Store.
 //
@@ -168,16 +176,32 @@ enum OrderStatus {
 //   payment       Payment?         — payment intent / confirmation
 
 model Order {
-  id              String      @id @default(uuid())
+  id              String          @id @default(uuid())
   storeId         String
   customerId      String
   deliveryDate    DateTime
-  /// Null for pickup orders. Free text for MVP; normalise to Address later.
+  /// PICKUP = customer collects at store; DELIVERY = home delivery.
+  fulfillmentType FulfillmentType @default(PICKUP)
+  /// Human-readable pickup time window, e.g. "09:00 – 12:00". PICKUP only.
+  pickupTime      String?
+  /// FK to StorePickupSlot — stored for traceability. PICKUP only.
+  pickupSlotId    String?
+  /// 8-digit CEP (no hyphen). DELIVERY only.
+  deliveryCep     String?
+  /// Street name. DELIVERY only.
+  deliveryStreet  String?
+  /// House / apartment number. DELIVERY only.
+  deliveryNumber  String?
+  /// Neighbourhood / bairro. DELIVERY only.
+  deliveryNeighborhood String?
+  /// City. DELIVERY only.
+  deliveryCity    String?
+  /// Legacy free-text address (kept for backward compat). Populated from structured fields.
   shippingAddress String?
   /// Current lifecycle state. Always starts as PENDING.
-  status          OrderStatus @default(PENDING)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  status          OrderStatus     @default(PENDING)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   store    Store       @relation(fields: [storeId], references: [id])
   customer Customer    @relation(fields: [customerId], references: [id])

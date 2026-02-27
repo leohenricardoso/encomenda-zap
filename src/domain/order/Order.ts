@@ -38,6 +38,18 @@ export enum OrderStatus {
   REJECTED = "REJECTED",
 }
 
+// ─── FulfillmentType ──────────────────────────────────────────────────────────────
+
+/**
+ * How the customer wants to receive the order.
+ * PICKUP   — customer collects at the store.
+ * DELIVERY — home delivery to the customer’s address.
+ */
+export enum FulfillmentType {
+  PICKUP = "PICKUP",
+  DELIVERY = "DELIVERY",
+}
+
 // ─── Status transition machine ───────────────────────────────────────────────
 
 /**
@@ -90,11 +102,21 @@ export interface Order {
    * slots to be modelled correctly.
    */
   deliveryDate: Date;
-  /**
-   * Delivery address. Null for pickup orders.
-   * Stored as free text for MVP; can be normalised to a structured Address
-   * value object later.
-   */
+  /** How the order is fulfilled — PICKUP at store or DELIVERY to address. */
+  fulfillmentType: FulfillmentType;
+  // ─ PICKUP fields ───────────────────────────────────────────────────
+  /** Human-readable slot label e.g. "09:00 – 12:00". PICKUP only. */
+  pickupTime: string | null;
+  /** FK to StorePickupSlot. PICKUP only. */
+  pickupSlotId: string | null;
+  // ─ DELIVERY fields ──────────────────────────────────────────────
+  /** 8-digit CEP (no hyphen). DELIVERY only. */
+  deliveryCep: string | null;
+  deliveryStreet: string | null;
+  deliveryNumber: string | null;
+  deliveryNeighborhood: string | null;
+  deliveryCity: string | null;
+  /** Legacy free-text address — kept for backward compat. */
   shippingAddress: string | null;
   /** Current lifecycle state — always starts as PENDING. */
   status: OrderStatus;
@@ -108,7 +130,17 @@ export interface CreateOrderInput {
   storeId: string;
   customerId: string;
   deliveryDate: Date;
-  /** Null for pickup orders. */
+  fulfillmentType: FulfillmentType;
+  // PICKUP
+  pickupTime?: string | null;
+  pickupSlotId?: string | null;
+  // DELIVERY
+  deliveryCep?: string | null;
+  deliveryStreet?: string | null;
+  deliveryNumber?: string | null;
+  deliveryNeighborhood?: string | null;
+  deliveryCity?: string | null;
+  /** Legacy free-text address (auto-computed from structured fields). */
   shippingAddress?: string | null;
   /**
    * Not accepted here — new orders always start as PENDING (domain invariant).
@@ -124,6 +156,14 @@ export interface CreateOrderInput {
  */
 export interface UpdateOrderInput {
   deliveryDate?: Date;
+  fulfillmentType?: FulfillmentType;
+  pickupTime?: string | null;
+  pickupSlotId?: string | null;
+  deliveryCep?: string | null;
+  deliveryStreet?: string | null;
+  deliveryNumber?: string | null;
+  deliveryNeighborhood?: string | null;
+  deliveryCity?: string | null;
   shippingAddress?: string | null;
 }
 

@@ -9,6 +9,7 @@ import {
   removeItem,
   updateItemQuantity,
   cartItemKey,
+  setDeliveryAddress,
 } from "../../../_lib/cart";
 import type { CartItem, CartSession } from "../../../_lib/cart";
 import {
@@ -25,6 +26,13 @@ interface OrderConfirmation {
   storeName: string;
   total: number;
   deliveryDate: string;
+  fulfillmentType: "PICKUP" | "DELIVERY";
+  pickupTime: string | null;
+  deliveryCep: string | null;
+  deliveryStreet: string | null;
+  deliveryNumber: string | null;
+  deliveryNeighborhood: string | null;
+  deliveryCity: string | null;
   customer: { name: string; whatsapp: string };
   items: {
     productName: string;
@@ -63,6 +71,11 @@ function formatWhatsApp(raw: string): string {
   const rest = body.slice(2);
   if (rest.length === 9) return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
   return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+}
+
+function formatCep(cep: string): string {
+  const digits = cep.replace(/\D/g, "");
+  return digits.length === 8 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : cep;
 }
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -252,6 +265,39 @@ function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
               </div>
               <div className="col-span-2">
                 <p className="text-xs text-foreground-muted">
+                  {confirmation.fulfillmentType === "DELIVERY"
+                    ? "Tipo de entrega"
+                    : "Retirada"}
+                </p>
+                <p className="mt-0.5 font-medium text-foreground">
+                  {confirmation.fulfillmentType === "PICKUP"
+                    ? `Retirada na loja${confirmation.pickupTime ? ` · ${confirmation.pickupTime}` : ""}`
+                    : "Entrega em domicílio"}
+                </p>
+              </div>
+              {confirmation.fulfillmentType === "DELIVERY" && (
+                <div className="col-span-2">
+                  <p className="text-xs text-foreground-muted">
+                    Endereço de entrega
+                  </p>
+                  <p className="mt-0.5 font-medium text-foreground">
+                    {[
+                      confirmation.deliveryStreet && confirmation.deliveryNumber
+                        ? `${confirmation.deliveryStreet}, ${confirmation.deliveryNumber}`
+                        : null,
+                      confirmation.deliveryNeighborhood,
+                      confirmation.deliveryCity,
+                      confirmation.deliveryCep
+                        ? `CEP ${formatCep(confirmation.deliveryCep)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" – ")}
+                  </p>
+                </div>
+              )}
+              <div className="col-span-2">
+                <p className="text-xs text-foreground-muted">
                   Entrega prevista
                 </p>
                 <p className="mt-0.5 font-medium text-foreground capitalize">
@@ -337,6 +383,11 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
   >("pickup");
   const [shippingCep, setShippingCepState] = useState<string | null>(null);
   const [pickupTime, setPickupTimeState] = useState<string | null>(null);
+  const [deliveryStreet, setDeliveryStreetState] = useState<string>("");
+  const [deliveryNumber, setDeliveryNumberState] = useState<string>("");
+  const [deliveryNeighborhood, setDeliveryNeighborhoodState] =
+    useState<string>("");
+  const [deliveryCity, setDeliveryCityState] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(
     null,
@@ -367,6 +418,11 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
     if (cart.fulfillmentType) setFulfillmentTypeState(cart.fulfillmentType);
     if (cart.shippingCep) setShippingCepState(cart.shippingCep);
     if (cart.pickupTime) setPickupTimeState(cart.pickupTime);
+    if (cart.deliveryStreet) setDeliveryStreetState(cart.deliveryStreet);
+    if (cart.deliveryNumber) setDeliveryNumberState(cart.deliveryNumber);
+    if (cart.deliveryNeighborhood)
+      setDeliveryNeighborhoodState(cart.deliveryNeighborhood);
+    if (cart.deliveryCity) setDeliveryCityState(cart.deliveryCity);
     setPageState("review");
   }, [storeSlug, router]);
 
@@ -408,6 +464,24 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
   // â”€â”€ Submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function handleConfirm() {
     if (!customer || !cartSession) return;
+
+    // Validate delivery address before submitting
+    if (fulfillmentType === "delivery") {
+      if (!shippingCep) {
+        setSubmitError("CEP de entrega é obrigatório.");
+        return;
+      }
+      if (
+        !deliveryStreet.trim() ||
+        !deliveryNumber.trim() ||
+        !deliveryNeighborhood.trim() ||
+        !deliveryCity.trim()
+      ) {
+        setSubmitError("Preencha todos os campos de endereço para continuar.");
+        return;
+      }
+    }
+
     setSubmitError(null);
     setPageState("submitting");
 
@@ -423,8 +497,26 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
             variantId: item.variantId ?? null,
             quantity: item.quantity,
           })),
-          shippingAddress:
+          fulfillmentType:
+            fulfillmentType === "delivery" ? "DELIVERY" : "PICKUP",
+          pickupTime:
+            fulfillmentType === "pickup" ? (pickupTime ?? null) : null,
+          pickupSlotId:
+            fulfillmentType === "pickup"
+              ? (cartSession.pickupSlotId ?? null)
+              : null,
+          deliveryCep:
             fulfillmentType === "delivery" ? (shippingCep ?? null) : null,
+          deliveryStreet:
+            fulfillmentType === "delivery" ? deliveryStreet || null : null,
+          deliveryNumber:
+            fulfillmentType === "delivery" ? deliveryNumber || null : null,
+          deliveryNeighborhood:
+            fulfillmentType === "delivery"
+              ? deliveryNeighborhood || null
+              : null,
+          deliveryCity:
+            fulfillmentType === "delivery" ? deliveryCity || null : null,
           deliveryDate: new Date(`${deliveryDate}T12:00:00`).toISOString(),
         }),
       });
@@ -620,15 +712,109 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
                   </span>
                 </div>
               )}
-              {fulfillmentType === "delivery" && shippingCep && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
-                  <TruckIcon className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    CEP{" "}
-                    <span className="font-medium text-foreground">
-                      {shippingCep}
-                    </span>
-                  </span>
+              {fulfillmentType === "delivery" && (
+                <div className="mt-3 space-y-2">
+                  {shippingCep && (
+                    <div className="flex items-center gap-1.5 text-xs text-foreground-muted">
+                      <TruckIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        CEP{" "}
+                        <span className="font-medium text-foreground">
+                          {formatCep(shippingCep)}
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2">
+                      <label className="text-xs text-foreground-muted">
+                        Rua <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryStreet}
+                        onChange={(e) => {
+                          setDeliveryStreetState(e.target.value);
+                          if (cartSession) {
+                            const next = setDeliveryAddress(cartSession, {
+                              street: e.target.value,
+                            });
+                            writeCart(next);
+                            setCartSession(next);
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        placeholder="Nome da rua"
+                        className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-foreground placeholder:text-foreground-muted/50 focus:border-accent focus:outline-none disabled:opacity-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-foreground-muted">
+                        Número <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryNumber}
+                        onChange={(e) => {
+                          setDeliveryNumberState(e.target.value);
+                          if (cartSession) {
+                            const next = setDeliveryAddress(cartSession, {
+                              number: e.target.value,
+                            });
+                            writeCart(next);
+                            setCartSession(next);
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        placeholder="Nº / Apto"
+                        className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-foreground placeholder:text-foreground-muted/50 focus:border-accent focus:outline-none disabled:opacity-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-foreground-muted">
+                        Bairro <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryNeighborhood}
+                        onChange={(e) => {
+                          setDeliveryNeighborhoodState(e.target.value);
+                          if (cartSession) {
+                            const next = setDeliveryAddress(cartSession, {
+                              neighborhood: e.target.value,
+                            });
+                            writeCart(next);
+                            setCartSession(next);
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        placeholder="Bairro"
+                        className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-foreground placeholder:text-foreground-muted/50 focus:border-accent focus:outline-none disabled:opacity-50"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs text-foreground-muted">
+                        Cidade <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryCity}
+                        onChange={(e) => {
+                          setDeliveryCityState(e.target.value);
+                          if (cartSession) {
+                            const next = setDeliveryAddress(cartSession, {
+                              city: e.target.value,
+                            });
+                            writeCart(next);
+                            setCartSession(next);
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        placeholder="Cidade"
+                        className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-foreground placeholder:text-foreground-muted/50 focus:border-accent focus:outline-none disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </section>

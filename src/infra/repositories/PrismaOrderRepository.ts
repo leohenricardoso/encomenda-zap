@@ -6,6 +6,7 @@ import {
   type UpdateOrderInput,
   type OrderFilters,
   OrderStatus,
+  FulfillmentType,
   canTransitionTo,
 } from "@/domain/order/Order";
 import type { OrderItem } from "@/domain/order/OrderItem";
@@ -31,6 +32,14 @@ export class PrismaOrderRepository implements IOrderRepository {
     storeId: string;
     customerId: string;
     deliveryDate: Date;
+    fulfillmentType: string;
+    pickupTime: string | null;
+    pickupSlotId: string | null;
+    deliveryCep: string | null;
+    deliveryStreet: string | null;
+    deliveryNumber: string | null;
+    deliveryNeighborhood: string | null;
+    deliveryCity: string | null;
     shippingAddress: string | null;
     status: string;
     createdAt: Date;
@@ -41,6 +50,14 @@ export class PrismaOrderRepository implements IOrderRepository {
       storeId: raw.storeId,
       customerId: raw.customerId,
       deliveryDate: raw.deliveryDate,
+      fulfillmentType: raw.fulfillmentType as FulfillmentType,
+      pickupTime: raw.pickupTime,
+      pickupSlotId: raw.pickupSlotId,
+      deliveryCep: raw.deliveryCep,
+      deliveryStreet: raw.deliveryStreet,
+      deliveryNumber: raw.deliveryNumber,
+      deliveryNeighborhood: raw.deliveryNeighborhood,
+      deliveryCity: raw.deliveryCity,
       shippingAddress: raw.shippingAddress,
       status: raw.status as OrderStatus,
       createdAt: raw.createdAt,
@@ -152,6 +169,14 @@ export class PrismaOrderRepository implements IOrderRepository {
         storeId: input.storeId,
         customerId: input.customerId,
         deliveryDate: input.deliveryDate,
+        fulfillmentType: input.fulfillmentType,
+        pickupTime: input.pickupTime ?? null,
+        pickupSlotId: input.pickupSlotId ?? null,
+        deliveryCep: input.deliveryCep ?? null,
+        deliveryStreet: input.deliveryStreet ?? null,
+        deliveryNumber: input.deliveryNumber ?? null,
+        deliveryNeighborhood: input.deliveryNeighborhood ?? null,
+        deliveryCity: input.deliveryCity ?? null,
         shippingAddress: input.shippingAddress ?? null,
         // status defaults to PENDING via the Prisma model default
       },
@@ -165,10 +190,35 @@ export class PrismaOrderRepository implements IOrderRepository {
     input: UpdateOrderInput,
   ): Promise<Order | null> {
     try {
-      const data: { deliveryDate?: Date; shippingAddress?: string | null } = {};
+      const data: Partial<{
+        deliveryDate: Date;
+        fulfillmentType: FulfillmentType;
+        pickupTime: string | null;
+        pickupSlotId: string | null;
+        deliveryCep: string | null;
+        deliveryStreet: string | null;
+        deliveryNumber: string | null;
+        deliveryNeighborhood: string | null;
+        deliveryCity: string | null;
+        shippingAddress: string | null;
+      }> = {};
 
       if (input.deliveryDate !== undefined)
         data.deliveryDate = input.deliveryDate;
+      if (input.fulfillmentType !== undefined)
+        data.fulfillmentType = input.fulfillmentType;
+      if (input.pickupTime !== undefined) data.pickupTime = input.pickupTime;
+      if (input.pickupSlotId !== undefined)
+        data.pickupSlotId = input.pickupSlotId;
+      if (input.deliveryCep !== undefined) data.deliveryCep = input.deliveryCep;
+      if (input.deliveryStreet !== undefined)
+        data.deliveryStreet = input.deliveryStreet;
+      if (input.deliveryNumber !== undefined)
+        data.deliveryNumber = input.deliveryNumber;
+      if (input.deliveryNeighborhood !== undefined)
+        data.deliveryNeighborhood = input.deliveryNeighborhood;
+      if (input.deliveryCity !== undefined)
+        data.deliveryCity = input.deliveryCity;
       if (input.shippingAddress !== undefined)
         data.shippingAddress = input.shippingAddress;
 

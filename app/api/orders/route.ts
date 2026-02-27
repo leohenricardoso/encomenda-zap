@@ -8,18 +8,27 @@ import { placeOrderController } from "@/infra/composition";
  *
  * Request body:
  * {
- *   storeSlug:       string,              // from the catalog URL
+ *   storeSlug:            string,          // from the catalog URL
  *   customer: {
- *     name:          string,
- *     whatsapp:      string               // any BR format: "(11) 99999-8888"
+ *     name:               string,
+ *     whatsapp:           string          // any BR format: "(11) 99999-8888"
  *   },
  *   items: [{
- *     productId:     string,              // CatalogProduct.id
- *     variantId?:    string | null,       // CatalogVariant.id — required when product has variants
- *     quantity:      number
+ *     productId:          string,         // CatalogProduct.id
+ *     variantId?:         string | null,  // CatalogVariant.id — required when product has variants
+ *     quantity:           number
  *   }],
- *   shippingAddress?: string | null,      // null for pickup orders
- *   deliveryDate:    string               // ISO 8601 — must be a future date
+ *   fulfillmentType:      "PICKUP" | "DELIVERY",
+ *   // PICKUP fields (optional)
+ *   pickupTime?:          string | null,  // e.g. "09:00 – 12:00"
+ *   pickupSlotId?:        string | null,  // StorePickupSlot.id
+ *   // DELIVERY fields (required when fulfillmentType === "DELIVERY")
+ *   deliveryCep:          string,         // 8-digit CEP, no hyphen
+ *   deliveryStreet:       string,
+ *   deliveryNumber:       string,
+ *   deliveryNeighborhood: string,
+ *   deliveryCity:         string,
+ *   deliveryDate:         string          // ISO 8601 — must be a future date
  * }
  *
  * 201 Created  → { success: true, data: PlaceOrderOutput }

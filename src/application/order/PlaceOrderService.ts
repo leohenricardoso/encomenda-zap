@@ -6,7 +6,7 @@ import {
   computeLineTotal,
   computeOrderTotal,
 } from "@/domain/order/OrderItem";
-import { OrderStatus } from "@/domain/order/Order";
+import { OrderStatus, FulfillmentType } from "@/domain/order/Order";
 import type { ICatalogRepository } from "@/domain/catalog/ICatalogRepository";
 import type { ICustomerRepository } from "@/domain/customer/ICustomerRepository";
 import type { IProductRepository } from "@/domain/product/IProductRepository";
@@ -31,7 +31,20 @@ export interface PlaceOrderInput {
     whatsapp: string;
   };
   items: PlaceOrderItemInput[];
-  shippingAddress?: string | null;
+  /** How the order should be fulfilled. */
+  fulfillmentType: FulfillmentType;
+  // ─ PICKUP fields ───────────────────────────────────────────
+  /** Chosen time slot label e.g. "09:00 – 12:00". PICKUP only. */
+  pickupTime?: string | null;
+  /** StorePickupSlot.id. PICKUP only. */
+  pickupSlotId?: string | null;
+  // ─ DELIVERY fields ───────────────────────────────────────
+  /** 8-digit CEP (no hyphen). Required when fulfillmentType === DELIVERY. */
+  deliveryCep?: string | null;
+  deliveryStreet?: string | null;
+  deliveryNumber?: string | null;
+  deliveryNeighborhood?: string | null;
+  deliveryCity?: string | null;
   /**
    * When the order should be ready / delivered.
    * Must be a future date (strictly after now).
@@ -64,6 +77,16 @@ export interface PlaceOrderOutput {
     whatsapp: string;
   };
   items: PlaceOrderItemOutput[];
+  fulfillmentType: FulfillmentType;
+  // PICKUP
+  pickupTime: string | null;
+  // DELIVERY
+  deliveryCep: string | null;
+  deliveryStreet: string | null;
+  deliveryNumber: string | null;
+  deliveryNeighborhood: string | null;
+  deliveryCity: string | null;
+  /** Legacy: populated from structured delivery fields. */
   shippingAddress: string | null;
   deliveryDate: Date;
   total: number;
@@ -151,6 +174,40 @@ export class PlaceOrderService {
         "deliveryDate must be a future date.",
         HttpStatus.UNPROCESSABLE_ENTITY,
       );
+    }
+
+    // Fulfillment-type-specific validation
+    if (input.fulfillmentType === FulfillmentType.DELIVERY) {
+      if (!input.deliveryCep?.trim()) {
+        throw new AppError(
+          "deliveryCep is required for delivery orders.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (!input.deliveryStreet?.trim()) {
+        throw new AppError(
+          "deliveryStreet is required for delivery orders.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (!input.deliveryNumber?.trim()) {
+        throw new AppError(
+          "deliveryNumber is required for delivery orders.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (!input.deliveryNeighborhood?.trim()) {
+        throw new AppError(
+          "deliveryNeighborhood is required for delivery orders.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (!input.deliveryCity?.trim()) {
+        throw new AppError(
+          "deliveryCity is required for delivery orders.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
 
     // ── 2. Resolve store ─────────────────────────────────────────────────────
@@ -271,11 +328,32 @@ export class PlaceOrderService {
 
     // ── 6. Create order ──────────────────────────────────────────────────────
 
+    // Build legacy shippingAddress from structured delivery fields
+    const shippingAddress =
+      input.fulfillmentType === FulfillmentType.DELIVERY
+        ? [
+            `${input.deliveryStreet}, ${input.deliveryNumber}`,
+            input.deliveryNeighborhood,
+            input.deliveryCity,
+            `CEP ${input.deliveryCep}`,
+          ]
+            .filter(Boolean)
+            .join(" – ")
+        : null;
+
     const order = await this.orderRepo.create({
       storeId,
       customerId: customer.id,
       deliveryDate: input.deliveryDate,
-      shippingAddress: input.shippingAddress ?? null,
+      fulfillmentType: input.fulfillmentType,
+      pickupTime: input.pickupTime ?? null,
+      pickupSlotId: input.pickupSlotId ?? null,
+      deliveryCep: input.deliveryCep ?? null,
+      deliveryStreet: input.deliveryStreet ?? null,
+      deliveryNumber: input.deliveryNumber ?? null,
+      deliveryNeighborhood: input.deliveryNeighborhood ?? null,
+      deliveryCity: input.deliveryCity ?? null,
+      shippingAddress,
     });
 
     // ── 7. Create items (backfill orderId now that we have it) ───────────────
@@ -306,6 +384,13 @@ export class PlaceOrderService {
         whatsapp: formatWhatsApp(normalisedWhatsApp),
       },
       items: outputItems,
+      fulfillmentType: order.fulfillmentType,
+      pickupTime: order.pickupTime,
+      deliveryCep: order.deliveryCep,
+      deliveryStreet: order.deliveryStreet,
+      deliveryNumber: order.deliveryNumber,
+      deliveryNeighborhood: order.deliveryNeighborhood,
+      deliveryCity: order.deliveryCity,
       shippingAddress: order.shippingAddress,
       deliveryDate: order.deliveryDate,
       total: computeOrderTotal(createdItems),

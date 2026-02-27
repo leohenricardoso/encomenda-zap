@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AppError } from "@/shared/errors/AppError";
 import { HttpStatus } from "@/shared/http/statuses";
 import { created, errorResponse } from "@/shared/http";
+import { FulfillmentType } from "@/domain/order/Order";
 import type { PlaceOrderService } from "@/application/order/PlaceOrderService";
 
 /**
@@ -35,7 +36,20 @@ export class PlaceOrderController {
 
     // ── 2. Extract and coerce fields ───────────────────────────────────────
 
-    const { storeSlug, customer, items, shippingAddress, deliveryDate } = body;
+    const {
+      storeSlug,
+      customer,
+      items,
+      fulfillmentType,
+      pickupTime,
+      pickupSlotId,
+      deliveryCep,
+      deliveryStreet,
+      deliveryNumber,
+      deliveryNeighborhood,
+      deliveryCity,
+      deliveryDate,
+    } = body;
 
     // Structural guard: customer must be an object
     if (
@@ -90,8 +104,22 @@ export class PlaceOrderController {
             quantity: Number(i.quantity),
           };
         }),
-        shippingAddress:
-          typeof shippingAddress === "string" ? shippingAddress : null,
+        fulfillmentType:
+          fulfillmentType === FulfillmentType.DELIVERY
+            ? FulfillmentType.DELIVERY
+            : FulfillmentType.PICKUP,
+        pickupTime: typeof pickupTime === "string" ? pickupTime : null,
+        pickupSlotId: typeof pickupSlotId === "string" ? pickupSlotId : null,
+        deliveryCep: typeof deliveryCep === "string" ? deliveryCep : null,
+        deliveryStreet:
+          typeof deliveryStreet === "string" ? deliveryStreet : null,
+        deliveryNumber:
+          typeof deliveryNumber === "string" ? deliveryNumber : null,
+        deliveryNeighborhood:
+          typeof deliveryNeighborhood === "string"
+            ? deliveryNeighborhood
+            : null,
+        deliveryCity: typeof deliveryCity === "string" ? deliveryCity : null,
         deliveryDate: parsedDeliveryDate,
       });
 
