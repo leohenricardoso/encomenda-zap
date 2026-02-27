@@ -1,29 +1,7 @@
 import Link from "next/link";
 import type { OrderViewModel } from "./types";
 import { OrderStatus, FulfillmentType } from "@/domain/order/Order";
-
-// ─── Config maps ──────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<
-  OrderStatus,
-  { label: string; badgeClass: string; accentClass: string }
-> = {
-  [OrderStatus.PENDING]: {
-    label: "Pendente",
-    badgeClass: "bg-amber-100 text-amber-800",
-    accentClass: "border-l-4 border-l-amber-400",
-  },
-  [OrderStatus.APPROVED]: {
-    label: "Aprovado",
-    badgeClass: "bg-green-100 text-green-800",
-    accentClass: "border-l-4 border-l-green-500",
-  },
-  [OrderStatus.REJECTED]: {
-    label: "Recusado",
-    badgeClass: "bg-surface-hover text-foreground-muted",
-    accentClass: "border-l-4 border-l-line",
-  },
-};
+import { StatusBadge, STATUS_CONFIG } from "./StatusBadge";
 
 const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
   [FulfillmentType.PICKUP]: "Retirada",
@@ -76,14 +54,7 @@ export function OrderCard({ order }: OrderCardProps) {
           >
             {order.customerName}
           </p>
-          <span
-            className={[
-              "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
-              cfg.badgeClass,
-            ].join(" ")}
-          >
-            {cfg.label}
-          </span>
+          <StatusBadge status={order.status} size="sm" className="shrink-0" />
         </div>
 
         {/* ── Fulfillment row ────────────────────────────────────────────── */}
