@@ -62,9 +62,16 @@ export default async function OrderDetailPage({ params }: Props) {
             <span className="hidden sm:inline">Voltar</span>
           </Link>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground truncate leading-snug">
-              {order.customerName}
-            </p>
+            <div className="flex items-center gap-2">
+              {order.orderNumber != null && (
+                <span className="shrink-0 rounded-md bg-foreground px-1.5 py-0.5 text-xs font-bold tabular-nums text-surface">
+                  #{order.orderNumber}
+                </span>
+              )}
+              <p className="font-semibold text-foreground truncate leading-snug">
+                {order.customerName}
+              </p>
+            </div>
             <p className="text-xs text-foreground-muted capitalize">
               {formatLongDate(order.deliveryDate)}
             </p>
@@ -90,6 +97,7 @@ export default async function OrderDetailPage({ params }: Props) {
           <CustomerSection
             name={order.customerName}
             whatsapp={order.customerWhatsapp}
+            orderNumber={order.orderNumber}
           />
 
           {/* ── Logistics ─────────────────────────────────────────────────── */}

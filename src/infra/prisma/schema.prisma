@@ -20,13 +20,14 @@ model Store {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  admin       Admin?
-  products    Product[]
-  customers   Customer[]
-  orders      Order[]
-  schedules   StoreSchedule[]
-  pickupSlots StorePickupSlot[]
-  cepRanges   StoreCepRange[]
+  admin        Admin?
+  products     Product[]
+  customers    Customer[]
+  orders       Order[]
+  schedules    StoreSchedule[]
+  pickupSlots  StorePickupSlot[]
+  cepRanges    StoreCepRange[]
+  orderCounter StoreOrderCounter?
 
   @@index([slug])
   @@map("stores")
@@ -200,6 +201,9 @@ model Order {
   shippingAddress String?
   /// Optional free-text note left by the customer when placing the order.
   notes           String?
+  /// Per-store sequential number shown to customers and the store owner (e.g. #42).
+  /// Generated atomically on creation; NULL only for orders migrated from before this field.
+  orderNumber     Int?
   /// Current lifecycle state. Always starts as PENDING.
   status          OrderStatus     @default(PENDING)
   createdAt       DateTime        @default(now())
@@ -260,6 +264,27 @@ model OrderItem {
   /// Fetch all items for a given order efficiently.
   @@index([orderId])
   @@map("order_items")
+}
+
+// ─── StoreOrderCounter ────────────────────────────────────────────────────────
+// Per-store monotonically-increasing counter for human-friendly order numbers.
+//
+// Design:
+// ─ One row per store; storeId is both the PK and the FK.
+// ─ lastNumber starts at 0; it is incremented atomically inside a transaction
+//   before every Order.create().  The newly-incremented value is written to
+//   orders.orderNumber, giving each store its own #1, #2, #3 … sequence.
+// ─ Because the upsert + order creation happen in a single serialisable
+//   transaction, two concurrent inserts for the same store will never receive
+//   the same orderNumber.
+
+model StoreOrderCounter {
+  storeId    String @id
+  lastNumber Int    @default(0)
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_order_counters")
 }
 
 // ─── StoreSchedule ────────────────────────────────────────────────────────────

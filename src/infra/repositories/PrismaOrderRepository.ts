@@ -43,6 +43,7 @@ export class PrismaOrderRepository implements IOrderRepository {
     deliveryCity: string | null;
     shippingAddress: string | null;
     notes: string | null;
+    orderNumber: number | null;
     status: string;
     createdAt: Date;
     updatedAt: Date;
@@ -62,6 +63,7 @@ export class PrismaOrderRepository implements IOrderRepository {
       deliveryCity: raw.deliveryCity,
       shippingAddress: raw.shippingAddress,
       notes: raw.notes,
+      orderNumber: raw.orderNumber,
       status: raw.status as OrderStatus,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
@@ -230,25 +232,39 @@ export class PrismaOrderRepository implements IOrderRepository {
   // ─── Commands ────────────────────────────────────────────────────────────────
 
   async create(input: CreateOrderInput): Promise<Order> {
-    const row = await prisma.order.create({
-      data: {
-        storeId: input.storeId,
-        customerId: input.customerId,
-        deliveryDate: input.deliveryDate,
-        fulfillmentType: input.fulfillmentType,
-        pickupTime: input.pickupTime ?? null,
-        pickupSlotId: input.pickupSlotId ?? null,
-        deliveryCep: input.deliveryCep ?? null,
-        deliveryStreet: input.deliveryStreet ?? null,
-        deliveryNumber: input.deliveryNumber ?? null,
-        deliveryNeighborhood: input.deliveryNeighborhood ?? null,
-        deliveryCity: input.deliveryCity ?? null,
-        shippingAddress: input.shippingAddress ?? null,
-        notes: input.notes ?? null,
-        // status defaults to PENDING via the Prisma model default
-      },
+    return prisma.$transaction(async (tx) => {
+      // Atomically increment the per-store order counter.
+      // upsert: if no counter row exists yet, create it at 1;
+      // otherwise increment lastNumber by 1 and return the new value.
+      // Both operations run inside the same serialisable transaction so
+      // two concurrent creates for the same store can never share a number.
+      const counter = await tx.storeOrderCounter.upsert({
+        where: { storeId: input.storeId },
+        create: { storeId: input.storeId, lastNumber: 1 },
+        update: { lastNumber: { increment: 1 } },
+      });
+
+      const row = await tx.order.create({
+        data: {
+          storeId: input.storeId,
+          customerId: input.customerId,
+          deliveryDate: input.deliveryDate,
+          fulfillmentType: input.fulfillmentType,
+          pickupTime: input.pickupTime ?? null,
+          pickupSlotId: input.pickupSlotId ?? null,
+          deliveryCep: input.deliveryCep ?? null,
+          deliveryStreet: input.deliveryStreet ?? null,
+          deliveryNumber: input.deliveryNumber ?? null,
+          deliveryNeighborhood: input.deliveryNeighborhood ?? null,
+          deliveryCity: input.deliveryCity ?? null,
+          shippingAddress: input.shippingAddress ?? null,
+          notes: input.notes ?? null,
+          orderNumber: counter.lastNumber,
+          // status defaults to PENDING via the Prisma model default
+        },
+      });
+      return this.toEntity(row);
     });
-    return this.toEntity(row);
   }
 
   async update(

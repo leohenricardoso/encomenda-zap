@@ -23,6 +23,7 @@ import { Card } from "../../../../../_components/Card";
 
 interface OrderConfirmation {
   reference: string;
+  orderNumber: number | null;
   storeName: string;
   total: number;
   deliveryDate: string;
@@ -231,9 +232,24 @@ function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Pedido recebido!
             </h1>
+            {confirmation.orderNumber != null ? (
+              <div className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 shadow-sm">
+                <span className="text-xs font-semibold uppercase tracking-widest text-surface/70">
+                  Pedido nº
+                </span>
+                <span className="text-2xl font-extrabold tabular-nums text-surface">
+                  #{confirmation.orderNumber}
+                </span>
+              </div>
+            ) : null}
             <p className="text-sm text-foreground-muted">
               {confirmation.storeName} vai entrar em contacto no seu WhatsApp.
             </p>
+            {confirmation.orderNumber != null && (
+              <p className="text-xs text-foreground-muted/70">
+                Guarde esse número para referência.
+              </p>
+            )}
           </div>
         </div>
 
@@ -241,12 +257,28 @@ function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
           <div className="flex flex-col gap-4">
             <SectionLabel>Confirmação</SectionLabel>
 
-            <div className="rounded-lg bg-surface-subtle p-3">
-              <p className="text-xs text-foreground-muted">Número do pedido</p>
-              <p className="mt-0.5 font-mono text-sm font-semibold text-foreground break-all">
-                {confirmation.reference}
-              </p>
-            </div>
+            {confirmation.orderNumber != null ? (
+              <div className="flex items-center gap-3 rounded-lg bg-surface-subtle p-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground shrink-0">
+                  <span className="text-sm font-extrabold tabular-nums text-surface">
+                    #{confirmation.orderNumber}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-foreground-muted">Pedido nº</p>
+                  <p className="text-lg font-bold text-foreground tabular-nums">
+                    {confirmation.orderNumber}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-surface-subtle p-3">
+                <p className="text-xs text-foreground-muted">Referência</p>
+                <p className="mt-0.5 font-mono text-sm font-semibold text-foreground break-all">
+                  {confirmation.reference}
+                </p>
+              </div>
+            )}
 
             <Divider />
 

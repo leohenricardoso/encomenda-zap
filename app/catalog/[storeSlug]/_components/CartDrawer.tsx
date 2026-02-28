@@ -333,6 +333,7 @@ export function CartDrawer({ storeSlug, isOpen, onClose }: CartDrawerProps) {
                 "w-full rounded-xl py-3.5 text-sm font-semibold",
                 "bg-foreground text-white",
                 "hover:opacity-90 active:scale-[.98] transition-all duration-150",
+                "mb-4",
               ].join(" ")}
             >
               Finalizar pedido →

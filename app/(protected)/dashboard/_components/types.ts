@@ -25,5 +25,9 @@ export interface OrderViewModel {
   /** Pre-computed sum: (unitPrice − discountAmount) × quantity, in BRL. */
   totalAmount: number;
   /** Pre-formatted item labels: ["2× Bolo de Chocolate (Médio)", "1× Brigadeiro"] */
-  products: string[];
+  products: string[]; /**
+   * Per-store sequential order number (e.g. 42 → displayed as #42).
+   * Null for orders created before this feature was introduced.
+   */
+  orderNumber: number | null;
 }

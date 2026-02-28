@@ -120,6 +120,12 @@ export interface Order {
   shippingAddress: string | null;
   /** Optional free-text note written by the customer at order time. */
   notes: string | null;
+  /**
+   * Per-store sequential number for human-friendly reference (e.g. #42).
+   * Null only for orders migrated before this field was introduced.
+   * Always set on new orders.
+   */
+  orderNumber: number | null;
   /** Current lifecycle state — always starts as PENDING. */
   status: OrderStatus;
   createdAt: Date;

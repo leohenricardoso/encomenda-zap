@@ -59,6 +59,7 @@ function toViewModel(order: OrderWithDetails): OrderViewModel {
     status: order.status,
     totalAmount,
     products,
+    orderNumber: order.orderNumber,
   };
 }
 

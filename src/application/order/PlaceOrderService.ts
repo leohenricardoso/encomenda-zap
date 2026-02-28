@@ -95,6 +95,8 @@ export interface PlaceOrderOutput {
   createdAt: Date;
   /** Optional customer note, forwarded verbatim. */
   notes: string | null;
+  /** Per-store sequential number shown to the customer (e.g. #42). */
+  orderNumber: number | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -401,6 +403,7 @@ export class PlaceOrderService {
       total: computeOrderTotal(createdItems),
       createdAt: order.createdAt,
       notes: order.notes,
+      orderNumber: order.orderNumber,
     };
   }
 }

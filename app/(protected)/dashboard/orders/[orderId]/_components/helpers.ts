@@ -36,3 +36,25 @@ export function formatCurrency(value: number): string {
 export function formatCep(raw: string): string {
   return raw.length === 8 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
 }
+
+/**
+ * Build a wa.me URL with a pre-filled message that includes the order number.
+ * Sanitises the phone to digits-only and encodeURIComponent-encodes the text.
+ *
+ * @param phone        Raw WhatsApp number (any format — digits extracted automatically)
+ * @param name         Customer name used in the greeting (first name extracted)
+ * @param orderNumber  Optional per-store sequential number to include in the message
+ */
+export function whatsAppUrl(
+  phone: string,
+  name: string,
+  orderNumber?: number | null,
+): string {
+  const digits = phone.replace(/\D/g, "");
+  const firstName = name.trim().split(/\s+/)[0] ?? name.trim();
+  const text =
+    orderNumber != null
+      ? `Olá ${firstName}, estamos falando sobre seu pedido nº ${orderNumber}.`
+      : `Olá ${firstName}, estamos falando sobre seu pedido.`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}

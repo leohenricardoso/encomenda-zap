@@ -1,4 +1,4 @@
-import { formatWhatsApp } from "./helpers";
+import { formatWhatsApp, whatsAppUrl } from "./helpers";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -6,15 +6,22 @@ interface CustomerSectionProps {
   name: string;
   /** Normalised digits-only WhatsApp, e.g. "5511999998888". */
   whatsapp: string;
+  /** Per-store sequential order number — included in the pre-filled WhatsApp message. */
+  orderNumber?: number | null;
 }
 
 /**
  * CustomerSection — displays customer name and WhatsApp contact info.
- * The WhatsApp button uses `wa.me` to open a direct chat.
+ * The WhatsApp button uses `wa.me` to open a direct chat with a pre-filled
+ * message that references the order number.
  */
-export function CustomerSection({ name, whatsapp }: CustomerSectionProps) {
+export function CustomerSection({
+  name,
+  whatsapp,
+  orderNumber,
+}: CustomerSectionProps) {
   const formatted = formatWhatsApp(whatsapp);
-  const waUrl = `https://wa.me/${whatsapp}`;
+  const waUrl = whatsAppUrl(whatsapp, name, orderNumber);
 
   return (
     <section aria-label="Cliente">
