@@ -47,5 +47,7 @@ export interface StoreCatalog {
   name: string;
   /** URL slug — matches the :storeSlug route param */
   slug: string;
+  /** Store's WhatsApp number (digit string, may include country code 55). */
+  whatsapp: string;
   products: CatalogProduct[];
 }

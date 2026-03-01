@@ -97,6 +97,8 @@ export interface PlaceOrderOutput {
   notes: string | null;
   /** Per-store sequential number shown to the customer (e.g. #42). */
   orderNumber: number | null;
+  /** Store's WhatsApp number (digit string) — for customer contact CTA. */
+  storeWhatsapp: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -224,7 +226,7 @@ export class PlaceOrderService {
     if (!catalog) {
       throw new AppError("Store not found.", HttpStatus.NOT_FOUND);
     }
-    const { storeId, name: storeName } = catalog;
+    const { storeId, name: storeName, whatsapp: storeWhatsapp } = catalog;
 
     // ── 3. Upsert customer ───────────────────────────────────────────────────
 
@@ -404,6 +406,7 @@ export class PlaceOrderService {
       createdAt: order.createdAt,
       notes: order.notes,
       orderNumber: order.orderNumber,
+      storeWhatsapp,
     };
   }
 }

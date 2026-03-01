@@ -31,6 +31,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         id: true,
         name: true,
         slug: true,
+        whatsapp: true,
         products: {
           where: { isActive: true },
           orderBy: { name: "asc" },
@@ -63,6 +64,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       storeId: store.id,
       name: store.name,
       slug: store.slug,
+      whatsapp: store.whatsapp,
       products: store.products.map((p) => this.toProduct(p)),
     };
   }

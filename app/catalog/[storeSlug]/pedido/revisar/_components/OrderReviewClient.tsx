@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   readCart,
@@ -36,6 +36,7 @@ interface OrderConfirmation {
   deliveryNeighborhood: string | null;
   deliveryCity: string | null;
   customer: { name: string; whatsapp: string };
+  storeWhatsapp: string;
   items: {
     productName: string;
     variantLabel: string | null;
@@ -218,121 +219,97 @@ interface SuccessViewProps {
 }
 
 function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
+  const waUrl = useMemo(() => {
+    if (!confirmation.storeWhatsapp) return null;
+    const digits = confirmation.storeWhatsapp.replace(/\D/g, "");
+    const normalized = digits.startsWith("55") ? digits : `55${digits}`;
+    const msg =
+      confirmation.orderNumber != null
+        ? `Olá! Gostaria de verificar o pedido nº ${confirmation.orderNumber}.`
+        : `Olá! Gostaria de verificar o meu pedido (ref. ${confirmation.reference.slice(0, 8)}).`;
+    return `https://wa.me/${normalized}?text=${encodeURIComponent(msg)}`;
+  }, [confirmation]);
+
   return (
     <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-120 space-y-8">
+      <div className="w-full max-w-md space-y-6">
+        {/* Hero */}
         <div className="flex flex-col items-center gap-4 text-center">
           <div
-            className="flex h-14 w-14 items-center justify-center rounded-xl shadow-sm"
+            className="flex h-16 w-16 items-center justify-center rounded-full shadow-md"
             style={{ backgroundColor: "#25D366" }}
             aria-hidden="true"
           >
-            <CheckIcon className="h-7 w-7 text-white" />
+            <CheckIcon className="h-8 w-8 text-white" />
           </div>
-          <div className="space-y-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Pedido recebido!
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Seu pedido foi enviado!
             </h1>
-            {confirmation.orderNumber != null ? (
-              <div className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 shadow-sm">
-                <span className="text-xs font-semibold uppercase tracking-widest text-surface/70">
-                  Pedido nº
-                </span>
-                <span className="text-2xl font-extrabold tabular-nums text-surface">
-                  #{confirmation.orderNumber}
-                </span>
-              </div>
-            ) : null}
             <p className="text-sm text-foreground-muted">
-              {confirmation.storeName} vai entrar em contacto no seu WhatsApp.
+              {confirmation.storeName} vai confirmar pelo WhatsApp.
             </p>
-            {confirmation.orderNumber != null && (
-              <p className="text-xs text-foreground-muted/70">
-                Guarde esse número para referência.
-              </p>
-            )}
           </div>
         </div>
 
+        {/* Status badge */}
+        <div className="flex justify-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-amber-800">
+            <ClockIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="text-sm font-medium">
+              Aguardando confirmação do estabelecimento
+            </span>
+          </div>
+        </div>
+
+        {/* Order number pill */}
+        {confirmation.orderNumber != null && (
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 shadow-sm">
+              <span className="text-xs font-semibold uppercase tracking-widest text-surface/70">
+                Pedido
+              </span>
+              <span className="text-xl font-extrabold tabular-nums text-surface">
+                #{confirmation.orderNumber}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* CTAs */}
+        <div className="flex flex-col gap-3 pt-1">
+          {waUrl && (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 active:opacity-80"
+              style={{ backgroundColor: "#25D366" }}
+            >
+              <WhatsAppIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              Entrar em contato
+            </a>
+          )}
+          <Button variant="secondary" onClick={onNewOrder} className="w-full">
+            Aguardar retorno
+          </Button>
+        </div>
+
+        {/* Compact summary */}
         <Card>
-          <div className="flex flex-col gap-4">
-            <SectionLabel>Confirmação</SectionLabel>
-
-            {confirmation.orderNumber != null ? (
-              <div className="flex items-center gap-3 rounded-lg bg-surface-subtle p-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground shrink-0">
-                  <span className="text-sm font-extrabold tabular-nums text-surface">
-                    #{confirmation.orderNumber}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs text-foreground-muted">Pedido nº</p>
-                  <p className="text-lg font-bold text-foreground tabular-nums">
-                    {confirmation.orderNumber}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-lg bg-surface-subtle p-3">
-                <p className="text-xs text-foreground-muted">Referência</p>
-                <p className="mt-0.5 font-mono text-sm font-semibold text-foreground break-all">
-                  {confirmation.reference}
-                </p>
-              </div>
-            )}
-
-            <Divider />
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex flex-col gap-3 text-sm">
+            <SectionLabel>Resumo do pedido</SectionLabel>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div>
-                <p className="text-xs text-foreground-muted">Cliente</p>
-                <p className="mt-0.5 font-medium text-foreground">
-                  {confirmation.customer.name}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-foreground-muted">WhatsApp</p>
-                <p className="mt-0.5 font-medium text-foreground">
-                  {formatWhatsApp(confirmation.customer.whatsapp)}
-                </p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs text-foreground-muted">
-                  {confirmation.fulfillmentType === "DELIVERY"
-                    ? "Tipo de entrega"
-                    : "Retirada"}
-                </p>
+                <p className="text-xs text-foreground-muted">Modalidade</p>
                 <p className="mt-0.5 font-medium text-foreground">
                   {confirmation.fulfillmentType === "PICKUP"
-                    ? `Retirada na loja${confirmation.pickupTime ? ` · ${confirmation.pickupTime}` : ""}`
+                    ? `Retirada${confirmation.pickupTime ? ` · ${confirmation.pickupTime}` : ""}`
                     : "Entrega em domicílio"}
                 </p>
               </div>
-              {confirmation.fulfillmentType === "DELIVERY" && (
-                <div className="col-span-2">
-                  <p className="text-xs text-foreground-muted">
-                    Endereço de entrega
-                  </p>
-                  <p className="mt-0.5 font-medium text-foreground">
-                    {[
-                      confirmation.deliveryStreet && confirmation.deliveryNumber
-                        ? `${confirmation.deliveryStreet}, ${confirmation.deliveryNumber}`
-                        : null,
-                      confirmation.deliveryNeighborhood,
-                      confirmation.deliveryCity,
-                      confirmation.deliveryCep
-                        ? `CEP ${formatCep(confirmation.deliveryCep)}`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" – ")}
-                  </p>
-                </div>
-              )}
-              <div className="col-span-2">
-                <p className="text-xs text-foreground-muted">
-                  Entrega prevista
-                </p>
+              <div>
+                <p className="text-xs text-foreground-muted">Data prevista</p>
                 <p className="mt-0.5 font-medium text-foreground capitalize">
                   {formatDeliveryDate(
                     (typeof confirmation.deliveryDate === "string"
@@ -377,13 +354,14 @@ function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
 
             <Divider />
 
-            <div className="flex justify-between text-sm font-semibold">
+            <div className="flex justify-between font-semibold">
               <span>Total</span>
               <span>{formatCurrency(confirmation.total)}</span>
             </div>
           </div>
         </Card>
 
+        {/* New order link */}
         <div className="text-center">
           <button
             type="button"
