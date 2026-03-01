@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, useRef, useEffect } from "react";
 import { OrderStatus } from "@/domain/order/Order";
 import { updateOrderStatus } from "../actions";
 import { StatusBadge } from "../../../_components/StatusBadge";
@@ -14,6 +14,10 @@ type ConfirmTarget = OrderStatus.REJECTED | OrderStatus.APPROVED;
 interface StatusActionsProps {
   orderId: string;
   currentStatus: OrderStatus;
+  /** Pre-computed wa.me URL with the approval message template resolved. */
+  approvalWaUrl: string;
+  /** Pre-computed wa.me URL with the rejection message template resolved. */
+  rejectionWaUrl: string;
 }
 
 /**
@@ -33,7 +37,12 @@ interface StatusActionsProps {
  *   APPROVED → REJECTED
  *   REJECTED → (terminal)
  */
-export function StatusActions({ orderId, currentStatus }: StatusActionsProps) {
+export function StatusActions({
+  orderId,
+  currentStatus,
+  approvalWaUrl,
+  rejectionWaUrl,
+}: StatusActionsProps) {
   const [isPending, startTransition] = useTransition();
 
   // Optimistic: reflects the new status before the server round-trip finishes.
@@ -48,6 +57,28 @@ export function StatusActions({ orderId, currentStatus }: StatusActionsProps) {
   const [success, setSuccess] = useState<string | null>(null);
   // Track which button triggered the in-flight action for per-button spinner.
   const [activeAction, setActiveAction] = useState<OrderStatus | null>(null);
+
+  /**
+   * After a successful status change, hold the WA URL that should be opened.
+   * Set to null once opened (manually or via the auto-redirect timer).
+   */
+  const [pendingWaUrl, setPendingWaUrl] = useState<string | null>(null);
+
+  /**
+   * Hidden anchor used to programmatically open the WhatsApp link.
+   * Calling .click() on an <a> element is more reliable than window.open()
+   * when triggered from an async context (avoids popup blockers).
+   */
+  const waLinkRef = useRef<HTMLAnchorElement>(null);
+
+  // Auto-open WhatsApp 800 ms after the WA URL becomes available.
+  useEffect(() => {
+    if (!pendingWaUrl) return;
+    const timer = setTimeout(() => {
+      waLinkRef.current?.click();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [pendingWaUrl]);
 
   const canApprove = displayStatus === OrderStatus.PENDING;
   const canReject =
@@ -80,6 +111,7 @@ export function StatusActions({ orderId, currentStatus }: StatusActionsProps) {
     const previous = displayStatus;
     setError(null);
     setSuccess(null);
+    setPendingWaUrl(null);
     setActiveAction(newStatus);
 
     // Optimistic flip.
@@ -96,8 +128,11 @@ export function StatusActions({ orderId, currentStatus }: StatusActionsProps) {
       } else {
         setSuccess(
           newStatus === OrderStatus.APPROVED
-            ? "Pedido aprovado com sucesso!"
+            ? "Pedido aprovado!"
             : "Pedido recusado.",
+        );
+        setPendingWaUrl(
+          newStatus === OrderStatus.APPROVED ? approvalWaUrl : rejectionWaUrl,
         );
       }
     });
@@ -116,22 +151,69 @@ export function StatusActions({ orderId, currentStatus }: StatusActionsProps) {
           <StatusBadge status={displayStatus} size="md" />
         </div>
 
-        {/* ── Success banner ────────────────────────────────────────────── */}
+        {/* ── Success / WA redirect banner ──────────────────────────────── */}
         {success && !isPending && (
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-800">
-            <span className="flex items-center gap-1.5">
-              <CheckCircleIcon className="h-4 w-4 shrink-0" />
-              {success}
-            </span>
-            <button
-              type="button"
-              onClick={() => setSuccess(null)}
-              className="opacity-60 hover:opacity-100 transition-opacity"
-              aria-label="Fechar"
+          <>
+            {/*
+             * Hidden anchor: .click() is called programmatically by the
+             * useEffect timer. Using an <a> element avoids popup-blocker issues
+             * that arise when window.open() is called in an async callback.
+             */}
+            {pendingWaUrl && (
+              <a
+                ref={waLinkRef}
+                href={pendingWaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setPendingWaUrl(null)}
+                aria-hidden="true"
+                tabIndex={-1}
+                className="sr-only"
+              />
+            )}
+
+            <div
+              className={[
+                "flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-medium",
+                displayStatus === OrderStatus.APPROVED
+                  ? "bg-green-50 text-green-800"
+                  : "bg-surface-hover text-foreground",
+              ].join(" ")}
             >
-              <XIcon className="h-3.5 w-3.5" />
-            </button>
-          </div>
+              <span className="flex items-center gap-1.5 min-w-0">
+                <CheckCircleIcon className="h-4 w-4 shrink-0" />
+                <span className="font-semibold">{success}</span>
+                {pendingWaUrl && (
+                  <span className="text-foreground-muted truncate">
+                    Abrindo WhatsApp…
+                  </span>
+                )}
+              </span>
+
+              {pendingWaUrl ? (
+                /* Manual-open button — visible until auto-redirect fires */
+                <a
+                  href={pendingWaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setPendingWaUrl(null)}
+                  className="inline-flex shrink-0 items-center gap-1 font-semibold text-[#25D366] hover:underline"
+                >
+                  <WhatsAppIcon className="h-3.5 w-3.5" />
+                  Abrir agora
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSuccess(null)}
+                  className="opacity-60 hover:opacity-100 transition-opacity"
+                  aria-label="Fechar"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         {/* ── Error banner ──────────────────────────────────────────────── */}
@@ -345,6 +427,21 @@ function SpinnerIcon({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  );
+}
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.858L0 24l6.335-1.509A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.821 9.821 0 0 1-5.002-1.368l-.359-.214-3.721.886.903-3.633-.235-.374A9.817 9.817 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z" />
     </svg>
   );
 }

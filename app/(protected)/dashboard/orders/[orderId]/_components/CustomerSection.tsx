@@ -8,6 +8,11 @@ interface CustomerSectionProps {
   whatsapp: string;
   /** Per-store sequential order number — included in the pre-filled WhatsApp message. */
   orderNumber?: number | null;
+  /**
+   * Pre-computed wa.me URL with a contextual message (e.g. approval/rejection text).
+   * When provided, overrides the default URL produced by whatsAppUrl().
+   */
+  waUrl?: string;
 }
 
 /**
@@ -19,9 +24,10 @@ export function CustomerSection({
   name,
   whatsapp,
   orderNumber,
+  waUrl: waUrlOverride,
 }: CustomerSectionProps) {
   const formatted = formatWhatsApp(whatsapp);
-  const waUrl = whatsAppUrl(whatsapp, name, orderNumber);
+  const waUrl = waUrlOverride ?? whatsAppUrl(whatsapp, name, orderNumber);
 
   return (
     <section aria-label="Cliente">

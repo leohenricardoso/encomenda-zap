@@ -1,13 +1,18 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
-import { getOrderUseCase } from "@/infra/composition";
+import { getOrderUseCase, getStoreMessagesUseCase } from "@/infra/composition";
 import { CustomerSection } from "./_components/CustomerSection";
 import { LogisticsSection } from "./_components/LogisticsSection";
 import { ItemsSection } from "./_components/ItemsSection";
 import { StatusActions } from "./_components/StatusActions";
 import { formatLongDate, formatCurrency } from "./_components/helpers";
 import { OrderStatus } from "@/domain/order/Order";
+import {
+  DEFAULT_MESSAGES,
+  resolveMessage,
+  type MessageVars,
+} from "@/domain/store/StoreMessageConfig";
 
 // ─── Status badge config (server render) ─────────────────────────────────────
 
@@ -36,8 +41,36 @@ interface Props {
 export default async function OrderDetailPage({ params }: Props) {
   const [session, { orderId }] = await Promise.all([getSession(), params]);
 
-  const order = await getOrderUseCase.execute(orderId, session.storeId);
+  const [order, msgConfig] = await Promise.all([
+    getOrderUseCase.execute(orderId, session.storeId),
+    getStoreMessagesUseCase.execute(session.storeId),
+  ]);
   if (!order) notFound();
+
+  // ── Build per-action WhatsApp URLs ────────────────────────────────────────
+  const firstName =
+    order.customerName.trim().split(/\s+/)[0] ?? order.customerName.trim();
+  const messageVars: MessageVars = {
+    cliente: firstName,
+    pedido: order.orderNumber?.toString() ?? "—",
+    data: formatLongDate(order.deliveryDate),
+  };
+  const waDigits = order.customerWhatsapp.replace(/\D/g, "");
+
+  const approvalWaUrl = `https://wa.me/${waDigits}?text=${encodeURIComponent(
+    resolveMessage(
+      msgConfig?.approvalMessage ?? null,
+      DEFAULT_MESSAGES.approval,
+      messageVars,
+    ),
+  )}`;
+  const rejectionWaUrl = `https://wa.me/${waDigits}?text=${encodeURIComponent(
+    resolveMessage(
+      msgConfig?.rejectionMessage ?? null,
+      DEFAULT_MESSAGES.rejection,
+      messageVars,
+    ),
+  )}`;
 
   const badge = STATUS_BADGE[order.status];
   const totalAmount = order.items.reduce(
@@ -133,14 +166,24 @@ export default async function OrderDetailPage({ params }: Props) {
 
           {/* ── Actions (sm+: rendered inline below items) ────────────────── */}
           <div className="hidden sm:block">
-            <StatusActions orderId={order.id} currentStatus={order.status} />
+            <StatusActions
+              orderId={order.id}
+              currentStatus={order.status}
+              approvalWaUrl={approvalWaUrl}
+              rejectionWaUrl={rejectionWaUrl}
+            />
           </div>
         </div>
       </div>
 
       {/* ── Actions (mobile: sticky bottom) ─────────────────────────────── */}
       <div className="sm:hidden">
-        <StatusActions orderId={order.id} currentStatus={order.status} />
+        <StatusActions
+          orderId={order.id}
+          currentStatus={order.status}
+          approvalWaUrl={approvalWaUrl}
+          rejectionWaUrl={rejectionWaUrl}
+        />
       </div>
     </div>
   );

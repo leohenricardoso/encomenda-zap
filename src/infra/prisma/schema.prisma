@@ -28,6 +28,7 @@ model Store {
   pickupSlots  StorePickupSlot[]
   cepRanges    StoreCepRange[]
   orderCounter StoreOrderCounter?
+  messageConfig StoreMessageConfig?
 
   @@index([slug])
   @@map("stores")
@@ -285,6 +286,34 @@ model StoreOrderCounter {
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@map("store_order_counters")
+}
+
+// ─── StoreMessageConfig ───────────────────────────────────────────────────────
+// Per-store customisable WhatsApp message templates.
+//
+// Design:
+// ─ Optional 1:1 with Store.  When no row exists the application falls back
+//   to built-in default messages.
+// ─ Templates support three placeholders: {cliente}, {pedido}, {data}.
+//   The application layer resolves them; this table stores raw template text.
+// ─ Both fields are nullable — the admin may configure one without the other.
+// ─ Prepared for future channels (email, SMS) by keeping the model separate
+//   from the order/store tables.
+
+model StoreMessageConfig {
+  storeId          String  @id
+  /// Message sent to a customer when their order is approved.
+  /// Supports: {cliente}, {pedido}, {data}. Max 500 chars.
+  approvalMessage  String? @db.VarChar(500)
+  /// Message sent to a customer when their order is rejected.
+  /// Supports: {cliente}, {pedido}, {data}. Max 500 chars.
+  rejectionMessage String? @db.VarChar(500)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_message_configs")
 }
 
 // ─── StoreSchedule ────────────────────────────────────────────────────────────

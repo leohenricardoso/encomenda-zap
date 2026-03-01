@@ -39,6 +39,7 @@ import { PrismaOrderItemRepository } from "@/infra/repositories/PrismaOrderItemR
 import { PrismaStoreScheduleRepository } from "@/infra/repositories/PrismaStoreScheduleRepository";
 import { PrismaPickupSlotRepository } from "@/infra/repositories/PrismaPickupSlotRepository";
 import { PrismaCepRangeRepository } from "@/infra/repositories/PrismaCepRangeRepository";
+import { PrismaStoreMessageRepository } from "@/infra/repositories/PrismaStoreMessageRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -66,6 +67,8 @@ import { GetCepRangeUseCase } from "@/application/cepRange/GetCepRangeUseCase";
 import { AddCepRangeUseCase } from "@/application/cepRange/UpsertCepRangeUseCase";
 import { DeleteCepRangeUseCase } from "@/application/cepRange/DeleteCepRangeUseCase";
 import { ValidateCepUseCase } from "@/application/cepRange/ValidateCepUseCase";
+import { GetStoreMessagesUseCase } from "@/application/store/GetStoreMessagesUseCase";
+import { UpsertStoreMessagesUseCase } from "@/application/store/UpsertStoreMessagesUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -196,3 +199,12 @@ export const storeCepRangeController = new StoreCepRangeController(
 );
 
 export { getCepRangeUseCase };
+
+// ─── Message Config ────────────────────────────────────────────────────────────
+
+const messageRepo = new PrismaStoreMessageRepository();
+
+export const getStoreMessagesUseCase = new GetStoreMessagesUseCase(messageRepo);
+export const upsertStoreMessagesUseCase = new UpsertStoreMessagesUseCase(
+  messageRepo,
+);
