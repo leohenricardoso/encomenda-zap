@@ -8,6 +8,8 @@ import {
   renderMessage,
 } from "@/domain/store/StoreMessageConfig";
 import { saveMessages } from "../actions";
+import { Button } from "../../../../../_components/Button";
+import { InlineFeedback } from "../../../../../_components/InlineFeedback";
 
 // ─── Demo vars for the live preview ──────────────────────────────────────────
 
@@ -211,29 +213,27 @@ export function MessagesForm({
 
       {/* ── Feedback banner ────────────────────────────────────────────── */}
       {feedback && (
-        <div
-          role="status"
-          className={[
-            "rounded-lg px-4 py-3 text-sm font-medium",
-            feedback.type === "success"
-              ? "bg-green-50 text-green-800 border border-green-200"
-              : "bg-red-50 text-danger border border-red-200",
-          ].join(" ")}
-        >
-          {feedback.message}
-        </div>
+        <InlineFeedback
+          type={feedback.type}
+          message={feedback.message}
+          onDismiss={
+            feedback.type === "error" ? () => setFeedback(null) : undefined
+          }
+        />
       )}
 
       {/* ── Save button ────────────────────────────────────────────────── */}
       <div className="flex justify-end">
-        <button
+        <Button
+          variant="primary"
+          size="md"
           type="button"
           onClick={handleSave}
           disabled={!canSave}
-          className="rounded-lg bg-foreground px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          loading={isPending}
         >
           {isPending ? "Salvando…" : "Salvar mensagens"}
-        </button>
+        </Button>
       </div>
     </div>
   );

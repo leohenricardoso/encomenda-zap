@@ -18,6 +18,7 @@ import {
 } from "../../../identificar/_components/CustomerIdentityForm";
 import { Button } from "../../../../../_components/Button";
 import { Card } from "../../../../../_components/Card";
+import { InlineFeedback } from "../../../../../_components/InlineFeedback";
 
 // â”€â”€â”€ Local types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -569,7 +570,7 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
       setPageState("success");
     } catch {
       setSubmitError(
-        "NÃ£o foi possÃ­vel enviar o pedido. Verifique sua conexÃ£o e tente novamente.",
+        "Não foi possível enviar seu pedido. Verifique sua conexão e tente novamente.",
       );
       setPageState("review");
     }
@@ -584,7 +585,16 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
     );
   }
 
-  // â”€â”€ Render: success â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render: submitting ────────────────────────────────────────────────────
+  if (pageState === "submitting") {
+    return (
+      <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-center gap-4 px-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-foreground" />
+        <p className="text-sm text-foreground-muted">Enviando seu pedido…</p>
+      </div>
+    );
+  }
+
   if (pageState === "success" && confirmation) {
     return (
       <SuccessView
@@ -597,7 +607,9 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
   // â”€â”€ Render: review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const items = cartSession?.items ?? [];
   const total = items.reduce((s, i) => s + i.lineTotal, 0);
-  const isSubmitting = pageState === "submitting";
+  // The "submitting" state is handled by an early return above,
+  // so isSubmitting is always false here — kept for referential clarity.
+  const isSubmitting = false;
 
   return (
     <div className="min-h-dvh bg-surface-subtle flex flex-col items-center justify-start px-4 py-12">
@@ -854,12 +866,11 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
 
             {/* Error banner */}
             {submitError && (
-              <div
-                role="alert"
-                className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3"
-              >
-                <p className="text-sm text-danger">{submitError}</p>
-              </div>
+              <InlineFeedback
+                type="error"
+                message={submitError}
+                onDismiss={() => setSubmitError(null)}
+              />
             )}
 
             {/* Actions */}

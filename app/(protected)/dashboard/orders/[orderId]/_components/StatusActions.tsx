@@ -4,6 +4,7 @@ import { useTransition, useState, useRef, useEffect } from "react";
 import { OrderStatus } from "@/domain/order/Order";
 import { updateOrderStatus } from "../actions";
 import { StatusBadge } from "../../../_components/StatusBadge";
+import { InlineFeedback } from "../../../../../_components/InlineFeedback";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -218,20 +219,12 @@ export function StatusActions({
 
         {/* ── Error banner ──────────────────────────────────────────────── */}
         {error && (
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-danger">
-            <span className="flex items-center gap-1.5">
-              <AlertIcon className="h-4 w-4 shrink-0" />
-              {error}
-            </span>
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="opacity-60 hover:opacity-100 transition-opacity"
-              aria-label="Fechar"
-            >
-              <XIcon className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <InlineFeedback
+            type="error"
+            message={error}
+            onDismiss={() => setError(null)}
+            compact
+          />
         )}
 
         {/* ── Inline confirmation (Recusar) ─────────────────────────────── */}
@@ -390,26 +383,6 @@ function CheckCircleIcon({ className }: { className?: string }) {
     >
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
       <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-  );
-}
-
-function AlertIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   );
 }
