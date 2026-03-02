@@ -69,6 +69,8 @@ import { DeleteCepRangeUseCase } from "@/application/cepRange/DeleteCepRangeUseC
 import { ValidateCepUseCase } from "@/application/cepRange/ValidateCepUseCase";
 import { GetStoreMessagesUseCase } from "@/application/store/GetStoreMessagesUseCase";
 import { UpsertStoreMessagesUseCase } from "@/application/store/UpsertStoreMessagesUseCase";
+import { GetStoreWhatsappUseCase } from "@/application/store/GetStoreWhatsappUseCase";
+import { UpdateStoreWhatsappUseCase } from "@/application/store/UpdateStoreWhatsappUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -207,4 +209,9 @@ const messageRepo = new PrismaStoreMessageRepository();
 export const getStoreMessagesUseCase = new GetStoreMessagesUseCase(messageRepo);
 export const upsertStoreMessagesUseCase = new UpsertStoreMessagesUseCase(
   messageRepo,
+);
+
+export const getStoreWhatsappUseCase = new GetStoreWhatsappUseCase(storeRepo);
+export const updateStoreWhatsappUseCase = new UpdateStoreWhatsappUseCase(
+  storeRepo,
 );

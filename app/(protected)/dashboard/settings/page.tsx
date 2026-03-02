@@ -7,14 +7,21 @@
 
 import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
-import { getCepRangeUseCase } from "@/infra/composition";
+import {
+  getCepRangeUseCase,
+  getStoreWhatsappUseCase,
+} from "@/infra/composition";
 import { CepRangeForm } from "./_components/CepRangeForm";
+import { WhatsappForm } from "./_components/WhatsappForm";
 
 export default async function SettingsPage() {
   const session = await getSession();
 
   // Load existing CEP ranges (empty array = unrestricted delivery)
   const ranges = await getCepRangeUseCase.execute(session.storeId);
+  const currentWhatsapp = await getStoreWhatsappUseCase.execute(
+    session.storeId,
+  );
 
   return (
     <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
@@ -37,6 +44,9 @@ export default async function SettingsPage() {
             cepEnd: r.cepEnd,
           }))}
         />
+
+        {/* ── WhatsApp da loja ────────────────────────────────────────────── */}
+        <WhatsappForm initialWhatsapp={currentWhatsapp} />
 
         {/* ── WhatsApp messages ───────────────────────────────────────────── */}
         <div className="rounded-xl border border-line bg-surface p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

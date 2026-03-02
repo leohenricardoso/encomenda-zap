@@ -59,4 +59,19 @@ export class PrismaStoreRepository implements IStoreRepository {
       throw err;
     }
   }
+
+  async findById(storeId: string): Promise<{ whatsapp: string } | null> {
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { whatsapp: true },
+    });
+    return store ?? null;
+  }
+
+  async updateWhatsapp(storeId: string, whatsapp: string): Promise<void> {
+    await prisma.store.update({
+      where: { id: storeId },
+      data: { whatsapp },
+    });
+  }
 }

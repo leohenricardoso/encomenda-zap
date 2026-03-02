@@ -5,6 +5,7 @@ import { CatalogHeader } from "./_components/CatalogHeader";
 import { CatalogProductCard } from "./_components/CatalogProductCard";
 import { CatalogEmptyState } from "./_components/CatalogEmptyState";
 import { CartFloatingBar } from "./_components/CartFloatingBar";
+import { WhatsappFab } from "./_components/WhatsappFab";
 
 // ─── Revalidation ─────────────────────────────────────────────────────────────
 // ISR: serve cached HTML for up to 60 s, regenerate in background.
@@ -101,6 +102,9 @@ export default async function CatalogPage({ params }: Props) {
 
       {/* ── Floating cart bar (Client Component — reads sessionStorage) ─ */}
       <CartFloatingBar storeSlug={storeSlug} />
+
+      {/* ── WhatsApp FAB — above cart bar, right side ──────────────── */}
+      <WhatsappFab whatsapp={catalog.whatsapp} storeName={catalog.name} />
     </div>
   );
 }

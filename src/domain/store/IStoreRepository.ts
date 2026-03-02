@@ -26,4 +26,10 @@ export interface IStoreRepository {
    * Throws AppError(CONFLICT) on duplicate admin email.
    */
   createWithAdmin(input: CreateStoreWithAdminInput): Promise<CreateStoreOutput>;
+
+  /** Returns the store's current WhatsApp number, or null if not found. */
+  findById(storeId: string): Promise<{ whatsapp: string } | null>;
+
+  /** Persists a new WhatsApp number for the store. */
+  updateWhatsapp(storeId: string, whatsapp: string): Promise<void>;
 }
