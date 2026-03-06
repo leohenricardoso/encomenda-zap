@@ -78,6 +78,7 @@ import { AddProductImageUseCase } from "@/application/productImage/AddProductIma
 import { GetProductImagesUseCase } from "@/application/productImage/GetProductImagesUseCase";
 import { RemoveProductImageUseCase } from "@/application/productImage/RemoveProductImageUseCase";
 import { SetImageAsPrimaryUseCase } from "@/application/productImage/SetImageAsPrimaryUseCase";
+import { UploadProductImageUseCase } from "@/application/productImage/UploadProductImageUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ import { StoreScheduleController } from "@/controllers/http/StoreScheduleControl
 import { StorePickupSlotController } from "@/controllers/http/StorePickupSlotController";
 import { StoreCepRangeController } from "@/controllers/http/StoreCepRangeController";
 import { ProductImageController } from "@/controllers/http/ProductImageController";
+import { ProductImageUploadController } from "@/controllers/http/ProductImageUploadController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -177,6 +179,17 @@ export const productImageController = new ProductImageController(
 );
 
 export { getProductImagesUseCase };
+
+// ─── Product Image Upload ───────────────────────────────────────────────────
+
+const uploadProductImageUseCase = new UploadProductImageUseCase(
+  productRepo,
+  imageRepo,
+);
+
+export const productImageUploadController = new ProductImageUploadController(
+  uploadProductImageUseCase,
+);
 
 /**
  * Repository singletons — available for direct import in future use cases.
