@@ -34,6 +34,8 @@ export interface CatalogProduct {
    */
   price: number | null;
   minQuantity: number;
+  /** Public URL of the main image (position = 1), or null when no images exist. */
+  mainImageUrl: string | null;
   variants: CatalogVariant[];
 }
 

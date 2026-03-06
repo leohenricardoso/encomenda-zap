@@ -9,9 +9,11 @@ import type {
   UpdateVariantInput,
   PricingType,
 } from "@/domain/product/Product";
+import type { ProductImage } from "@/domain/productImage/ProductImage";
 import type {
   Product as PrismaProduct,
   ProductVariant as PrismaVariant,
+  ProductImage as PrismaImage,
 } from "@prisma/client";
 
 /**
@@ -27,18 +29,49 @@ import type {
  * higher layers always receive a complete entity.
  */
 
-const WITH_VARIANTS = {
+// ─────────────────── Prisma include shapes ────────────────────────────────
+
+/** Used for list queries — loads only the main image (position = 1). */
+const WITH_VARIANTS_AND_MAIN_IMAGE = {
   include: {
-    variants: {
-      orderBy: { sortOrder: "asc" as const },
+    variants: { orderBy: { sortOrder: "asc" as const } },
+    images: {
+      where: { position: 1 },
+      orderBy: { position: "asc" as const },
     },
   },
 } as const;
 
-type PrismaProductWithVariants = PrismaProduct & { variants: PrismaVariant[] };
+/** Used for getById — loads ALL images ordered by position. */
+const WITH_VARIANTS_AND_ALL_IMAGES = {
+  include: {
+    variants: { orderBy: { sortOrder: "asc" as const } },
+    images: { orderBy: { position: "asc" as const } },
+  },
+} as const;
+
+// Keep old alias so the rest of the methods that don't care about images
+// (create, update, etc.) stay consistent with the list shape.
+const WITH_VARIANTS = WITH_VARIANTS_AND_MAIN_IMAGE;
+
+type PrismaProductWithImages = PrismaProduct & {
+  variants: PrismaVariant[];
+  images: PrismaImage[];
+};
 
 export class PrismaProductRepository implements IProductRepository {
   //  Mapping
+
+  private toImageEntity(raw: PrismaImage): ProductImage {
+    return {
+      id: raw.id,
+      productId: raw.productId,
+      storeId: raw.storeId,
+      imageUrl: raw.imageUrl,
+      position: raw.position,
+      createdAt: raw.createdAt,
+    };
+  }
 
   private toVariantEntity(raw: PrismaVariant): ProductVariant {
     return {
@@ -55,7 +88,7 @@ export class PrismaProductRepository implements IProductRepository {
     };
   }
 
-  private toEntity(raw: PrismaProductWithVariants): Product {
+  private toEntity(raw: PrismaProductWithImages): Product {
     return {
       id: raw.id,
       storeId: raw.storeId,
@@ -67,6 +100,7 @@ export class PrismaProductRepository implements IProductRepository {
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
       variants: raw.variants.map((v) => this.toVariantEntity(v)),
+      images: raw.images.map((img) => this.toImageEntity(img)),
     };
   }
 
@@ -84,7 +118,7 @@ export class PrismaProductRepository implements IProductRepository {
   async findById(id: string, storeId: string): Promise<Product | null> {
     const row = await prisma.product.findFirst({
       where: { id, storeId },
-      ...WITH_VARIANTS,
+      ...WITH_VARIANTS_AND_ALL_IMAGES,
     });
     return row ? this.toEntity(row) : null;
   }

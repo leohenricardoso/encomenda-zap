@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
-import { getProductByIdUseCase } from "@/infra/composition";
+import {
+  getProductByIdUseCase,
+  getProductImagesUseCase,
+} from "@/infra/composition";
 import { ProductForm } from "../../_components/ProductForm";
+import { ImageManager } from "../../_components/ImageManager";
 
 export const metadata = { title: "Editar Produto" };
 
@@ -21,6 +25,11 @@ export default async function EditProductPage({ params }: Props) {
     notFound();
   }
 
+  const productImages = await getProductImagesUseCase.execute(
+    product!.id,
+    session.storeId,
+  );
+
   return (
     <main className="p-6 max-w-2xl mx-auto">
       {/* Breadcrumb */}
@@ -37,17 +46,21 @@ export default async function EditProductPage({ params }: Props) {
       </nav>
 
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Editar produto</h1>
-      <p className="text-sm text-gray-500 mb-6">{product.name}</p>
+      <p className="text-sm text-gray-500 mb-6">{product!.name}</p>
+
+      <ImageManager productId={product!.id} initialImages={productImages} />
+
+      <div className="mt-8" />
 
       <ProductForm
-        productId={product.id}
+        productId={product!.id}
         initialValues={{
-          name: product.name,
-          description: product.description ?? "",
-          price: product.price != null ? product.price.toFixed(2) : "",
-          minQuantity: String(product.minQuantity),
-          isActive: product.isActive,
-          variants: product.variants.map((v) => ({
+          name: product!.name,
+          description: product!.description ?? "",
+          price: product!.price != null ? product!.price.toFixed(2) : "",
+          minQuantity: String(product!.minQuantity),
+          isActive: product!.isActive,
+          variants: product!.variants.map((v) => ({
             label: v.label,
             price: v.price.toFixed(2),
             pricingType: v.pricingType,

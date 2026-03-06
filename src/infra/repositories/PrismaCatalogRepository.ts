@@ -9,6 +9,7 @@ import type { PricingType } from "@/domain/product/Product";
 import type {
   Product as PrismaProduct,
   ProductVariant as PrismaVariant,
+  ProductImage as PrismaImage,
 } from "@prisma/client";
 
 /**
@@ -60,6 +61,11 @@ export class PrismaCatalogRepository implements ICatalogRepository {
                 sortOrder: true,
               },
             },
+            images: {
+              where: { position: 1 },
+              select: { imageUrl: true },
+              take: 1,
+            },
           },
         },
       },
@@ -105,6 +111,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         PrismaVariant,
         "id" | "label" | "price" | "pricingType" | "isActive" | "sortOrder"
       >[];
+      images: Pick<PrismaImage, "imageUrl">[];
     },
   ): CatalogProduct {
     return {
@@ -113,6 +120,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       description: raw.description,
       price: raw.price !== null ? Number(raw.price) : null,
       minQuantity: raw.minQuantity,
+      mainImageUrl: raw.images[0]?.imageUrl ?? null,
       variants: raw.variants.map((v) => this.toVariant(v)),
     };
   }

@@ -40,6 +40,7 @@ import { PrismaStoreScheduleRepository } from "@/infra/repositories/PrismaStoreS
 import { PrismaPickupSlotRepository } from "@/infra/repositories/PrismaPickupSlotRepository";
 import { PrismaCepRangeRepository } from "@/infra/repositories/PrismaCepRangeRepository";
 import { PrismaStoreMessageRepository } from "@/infra/repositories/PrismaStoreMessageRepository";
+import { PrismaProductImageRepository } from "@/infra/repositories/PrismaProductImageRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -73,6 +74,10 @@ import { GetStoreWhatsappUseCase } from "@/application/store/GetStoreWhatsappUse
 import { UpdateStoreWhatsappUseCase } from "@/application/store/UpdateStoreWhatsappUseCase";
 import { GetStorePickupAddressUseCase } from "@/application/store/GetStorePickupAddressUseCase";
 import { UpdateStorePickupAddressUseCase } from "@/application/store/UpdateStorePickupAddressUseCase";
+import { AddProductImageUseCase } from "@/application/productImage/AddProductImageUseCase";
+import { GetProductImagesUseCase } from "@/application/productImage/GetProductImagesUseCase";
+import { RemoveProductImageUseCase } from "@/application/productImage/RemoveProductImageUseCase";
+import { SetImageAsPrimaryUseCase } from "@/application/productImage/SetImageAsPrimaryUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -83,6 +88,7 @@ import { PlaceOrderController } from "@/controllers/http/PlaceOrderController";
 import { StoreScheduleController } from "@/controllers/http/StoreScheduleController";
 import { StorePickupSlotController } from "@/controllers/http/StorePickupSlotController";
 import { StoreCepRangeController } from "@/controllers/http/StoreCepRangeController";
+import { ProductImageController } from "@/controllers/http/ProductImageController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -99,6 +105,7 @@ const orderItemRepo = new PrismaOrderItemRepository();
 const scheduleRepo = new PrismaStoreScheduleRepository();
 const pickupSlotRepo = new PrismaPickupSlotRepository();
 const cepRangeRepo = new PrismaCepRangeRepository();
+const imageRepo = new PrismaProductImageRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
@@ -151,6 +158,25 @@ export const getOrderUseCase = new GetOrderUseCase(orderRepo);
 export const getStoreCatalogUseCase = new GetStoreCatalogUseCase(catalogRepo);
 
 export { listProductsUseCase, getProductByIdUseCase };
+
+// ─── Product Images ───────────────────────────────────────────────────────────
+
+const addProductImageUseCase = new AddProductImageUseCase(
+  productRepo,
+  imageRepo,
+);
+const getProductImagesUseCase = new GetProductImagesUseCase(imageRepo);
+const removeProductImageUseCase = new RemoveProductImageUseCase(imageRepo);
+const setImageAsPrimaryUseCase = new SetImageAsPrimaryUseCase(imageRepo);
+
+export const productImageController = new ProductImageController(
+  addProductImageUseCase,
+  removeProductImageUseCase,
+  getProductImagesUseCase,
+  setImageAsPrimaryUseCase,
+);
+
+export { getProductImagesUseCase };
 
 /**
  * Repository singletons — available for direct import in future use cases.

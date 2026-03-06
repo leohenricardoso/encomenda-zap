@@ -13,6 +13,8 @@
  * remains tenant-scoped even when variants are fetched independently.
  */
 
+import type { ProductImage } from "@/domain/productImage/ProductImage";
+
 // ─── Value objects ────────────────────────────────────────────────────────────
 
 /**
@@ -66,6 +68,12 @@ export interface Product {
   updatedAt: Date;
   /** Eagerly loaded when requested via findById / findAllByStore */
   variants: ProductVariant[];
+  /**
+   * Eagerly loaded images ordered by position (ascending).
+   * findAllByStore includes only the main image (position = 1).
+   * findById includes all images.
+   */
+  images: ProductImage[];
 }
 
 // ─── Input types ──────────────────────────────────────────────────────────────

@@ -189,6 +189,7 @@ export default async function ProductsPage({ searchParams }: Props) {
               price={product.price}
               variantCount={product.variants.length}
               isActive={product.isActive}
+              imageUrl={product.images[0]?.imageUrl ?? null}
             />
           ))
         )}
