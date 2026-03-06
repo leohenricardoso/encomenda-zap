@@ -10,18 +10,21 @@ import { getSession } from "@/infra/http/auth/getSession";
 import {
   getCepRangeUseCase,
   getStoreWhatsappUseCase,
+  getStorePickupAddressUseCase,
 } from "@/infra/composition";
 import { CepRangeForm } from "./_components/CepRangeForm";
 import { WhatsappForm } from "./_components/WhatsappForm";
+import { PickupAddressForm } from "./_components/PickupAddressForm";
 
 export default async function SettingsPage() {
   const session = await getSession();
 
   // Load existing CEP ranges (empty array = unrestricted delivery)
-  const ranges = await getCepRangeUseCase.execute(session.storeId);
-  const currentWhatsapp = await getStoreWhatsappUseCase.execute(
-    session.storeId,
-  );
+  const [ranges, currentWhatsapp, pickupAddress] = await Promise.all([
+    getCepRangeUseCase.execute(session.storeId),
+    getStoreWhatsappUseCase.execute(session.storeId),
+    getStorePickupAddressUseCase.execute(session.storeId),
+  ]);
 
   return (
     <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
@@ -47,6 +50,9 @@ export default async function SettingsPage() {
 
         {/* ── WhatsApp da loja ────────────────────────────────────────────── */}
         <WhatsappForm initialWhatsapp={currentWhatsapp} />
+
+        {/* ── Endereço de retirada ─────────────────────────────────────────── */}
+        <PickupAddressForm initialAddress={pickupAddress} />
 
         {/* ── WhatsApp messages ───────────────────────────────────────────── */}
         <div className="rounded-xl border border-line bg-surface p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

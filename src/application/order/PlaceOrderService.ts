@@ -13,6 +13,7 @@ import type { IProductRepository } from "@/domain/product/IProductRepository";
 import type { IOrderRepository } from "@/domain/order/IOrderRepository";
 import type { IOrderItemRepository } from "@/domain/order/IOrderItemRepository";
 import type { CreateOrderItemInput } from "@/domain/order/OrderItem";
+import type { StorePickupAddress } from "@/domain/store/types";
 
 // ─── I/O types ────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,8 @@ export interface PlaceOrderOutput {
   orderNumber: number | null;
   /** Store's WhatsApp number (digit string) — for customer contact CTA. */
   storeWhatsapp: string;
+  /** Store's configured pickup address, or null when not set. */
+  pickupAddress: StorePickupAddress | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -226,7 +229,12 @@ export class PlaceOrderService {
     if (!catalog) {
       throw new AppError("Store not found.", HttpStatus.NOT_FOUND);
     }
-    const { storeId, name: storeName, whatsapp: storeWhatsapp } = catalog;
+    const {
+      storeId,
+      name: storeName,
+      whatsapp: storeWhatsapp,
+      pickupAddress,
+    } = catalog;
 
     // ── 3. Upsert customer ───────────────────────────────────────────────────
 
@@ -407,6 +415,7 @@ export class PlaceOrderService {
       notes: order.notes,
       orderNumber: order.orderNumber,
       storeWhatsapp,
+      pickupAddress,
     };
   }
 }

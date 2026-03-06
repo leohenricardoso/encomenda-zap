@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import type { StorePickupAddress } from "@/domain/store/types";
 import {
   readCart,
   writeCart,
@@ -35,6 +36,7 @@ interface OrderConfirmation {
   deliveryNumber: string | null;
   deliveryNeighborhood: string | null;
   deliveryCity: string | null;
+  pickupAddress: StorePickupAddress | null;
   customer: { name: string; whatsapp: string };
   storeWhatsapp: string;
   items: {
@@ -215,10 +217,15 @@ function EditableItemRow({
 
 interface SuccessViewProps {
   confirmation: OrderConfirmation;
+  initialPickupAddress: StorePickupAddress | null;
   onNewOrder: () => void;
 }
 
-function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
+function SuccessView({
+  confirmation,
+  initialPickupAddress,
+  onNewOrder,
+}: SuccessViewProps) {
   const waUrl = useMemo(() => {
     if (!confirmation.storeWhatsapp) return null;
     const digits = confirmation.storeWhatsapp.replace(/\D/g, "");
@@ -308,6 +315,34 @@ function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
                     : "Entrega em domicílio"}
                 </p>
               </div>
+              {confirmation.fulfillmentType === "PICKUP" &&
+                (() => {
+                  const addr =
+                    confirmation.pickupAddress ?? initialPickupAddress;
+                  return (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-foreground-muted">
+                        Endereço de retirada
+                      </p>
+                      <p className="mt-0.5 font-medium text-foreground leading-snug">
+                        {addr
+                          ? [
+                              addr.locationName,
+                              `${addr.street}, ${addr.number}`,
+                              addr.neighborhood,
+                              addr.city,
+                              addr.complement ?? undefined,
+                              addr.reference
+                                ? `Ref: ${addr.reference}`
+                                : undefined,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
+                          : "Endereço de retirada será informado após a confirmação do pedido"}
+                      </p>
+                    </div>
+                  );
+                })()}
               <div>
                 <p className="text-xs text-foreground-muted">Data prevista</p>
                 <p className="mt-0.5 font-medium text-foreground capitalize">
@@ -380,9 +415,13 @@ function SuccessView({ confirmation, onNewOrder }: SuccessViewProps) {
 
 interface OrderReviewClientProps {
   storeSlug: string;
+  initialPickupAddress: StorePickupAddress | null;
 }
 
-export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
+export function OrderReviewClient({
+  storeSlug,
+  initialPickupAddress,
+}: OrderReviewClientProps) {
   const router = useRouter();
 
   const [pageState, setPageState] = useState<PageState>("loading");
@@ -577,6 +616,7 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
     return (
       <SuccessView
         confirmation={confirmation}
+        initialPickupAddress={initialPickupAddress}
         onNewOrder={() => router.push(`/catalog/${storeSlug}`)}
       />
     );
@@ -732,6 +772,27 @@ export function OrderReviewClient({ storeSlug }: OrderReviewClientProps) {
                     <span className="font-medium text-foreground">
                       {pickupTime}
                     </span>
+                  </span>
+                </div>
+              )}
+              {fulfillmentType === "pickup" && (
+                <div className="mt-2 flex items-start gap-1.5 text-xs text-foreground-muted">
+                  <MapPinIcon className="h-3.5 w-3.5 shrink-0 mt-0.5 text-accent" />
+                  <span>
+                    {initialPickupAddress
+                      ? [
+                          initialPickupAddress.locationName,
+                          `${initialPickupAddress.street}, ${initialPickupAddress.number}`,
+                          initialPickupAddress.neighborhood,
+                          initialPickupAddress.city,
+                          initialPickupAddress.complement ?? undefined,
+                          initialPickupAddress.reference
+                            ? `Ref: ${initialPickupAddress.reference}`
+                            : undefined,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      : "Endereço de retirada será informado após a confirmação do pedido"}
                   </span>
                 </div>
               )}
@@ -970,6 +1031,25 @@ function ClockIcon({ className }: { className?: string }) {
     >
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function MapPinIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   );
 }

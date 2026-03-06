@@ -4,6 +4,7 @@ import { getStoreCatalogUseCase } from "@/infra/composition";
 import { CatalogHeader } from "./_components/CatalogHeader";
 import { CatalogProductCard } from "./_components/CatalogProductCard";
 import { CatalogEmptyState } from "./_components/CatalogEmptyState";
+import { CatalogPickupInfo } from "./_components/CatalogPickupInfo";
 import { CartFloatingBar } from "./_components/CartFloatingBar";
 import { WhatsappFab } from "./_components/WhatsappFab";
 
@@ -83,6 +84,11 @@ export default async function CatalogPage({ params }: Props) {
               />
             ))
           )}
+        </div>
+
+        {/* ── Pickup address ─────────────────────────────────────────── */}
+        <div className="mt-6 max-w-sm">
+          <CatalogPickupInfo pickupAddress={catalog.pickupAddress} />
         </div>
       </main>
 

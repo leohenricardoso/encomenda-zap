@@ -71,6 +71,8 @@ import { GetStoreMessagesUseCase } from "@/application/store/GetStoreMessagesUse
 import { UpsertStoreMessagesUseCase } from "@/application/store/UpsertStoreMessagesUseCase";
 import { GetStoreWhatsappUseCase } from "@/application/store/GetStoreWhatsappUseCase";
 import { UpdateStoreWhatsappUseCase } from "@/application/store/UpdateStoreWhatsappUseCase";
+import { GetStorePickupAddressUseCase } from "@/application/store/GetStorePickupAddressUseCase";
+import { UpdateStorePickupAddressUseCase } from "@/application/store/UpdateStorePickupAddressUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -215,3 +217,9 @@ export const getStoreWhatsappUseCase = new GetStoreWhatsappUseCase(storeRepo);
 export const updateStoreWhatsappUseCase = new UpdateStoreWhatsappUseCase(
   storeRepo,
 );
+
+export const getStorePickupAddressUseCase = new GetStorePickupAddressUseCase(
+  storeRepo,
+);
+export const updateStorePickupAddressUseCase =
+  new UpdateStorePickupAddressUseCase(storeRepo);

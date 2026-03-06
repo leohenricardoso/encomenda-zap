@@ -1,4 +1,5 @@
 import type { PricingType } from "@/domain/product/Product";
+import type { StorePickupAddress } from "@/domain/store/types";
 
 /**
  * Catalog domain types — public-facing, read-only view of a store's offering.
@@ -49,5 +50,7 @@ export interface StoreCatalog {
   slug: string;
   /** Store's WhatsApp number (digit string, may include country code 55). */
   whatsapp: string;
+  /** Store's physical pickup address, or null when not yet configured. */
+  pickupAddress: StorePickupAddress | null;
   products: CatalogProduct[];
 }

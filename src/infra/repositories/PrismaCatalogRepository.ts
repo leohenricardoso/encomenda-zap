@@ -32,6 +32,13 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         name: true,
         slug: true,
         whatsapp: true,
+        pickupLocationName: true,
+        pickupStreet: true,
+        pickupNumber: true,
+        pickupNeighborhood: true,
+        pickupCity: true,
+        pickupComplement: true,
+        pickupReference: true,
         products: {
           where: { isActive: true },
           orderBy: { name: "asc" },
@@ -60,11 +67,29 @@ export class PrismaCatalogRepository implements ICatalogRepository {
 
     if (!store || !store.slug) return null;
 
+    const pickupAddress =
+      store.pickupLocationName &&
+      store.pickupStreet &&
+      store.pickupNumber &&
+      store.pickupNeighborhood &&
+      store.pickupCity
+        ? {
+            locationName: store.pickupLocationName,
+            street: store.pickupStreet,
+            number: store.pickupNumber,
+            neighborhood: store.pickupNeighborhood,
+            city: store.pickupCity,
+            complement: store.pickupComplement,
+            reference: store.pickupReference,
+          }
+        : null;
+
     return {
       storeId: store.id,
       name: store.name,
       slug: store.slug,
       whatsapp: store.whatsapp,
+      pickupAddress,
       products: store.products.map((p) => this.toProduct(p)),
     };
   }

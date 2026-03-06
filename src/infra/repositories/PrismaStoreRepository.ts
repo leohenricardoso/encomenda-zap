@@ -4,7 +4,10 @@ import type {
   IStoreRepository,
   CreateStoreWithAdminInput,
 } from "@/domain/store/IStoreRepository";
-import type { CreateStoreOutput } from "@/domain/store/types";
+import type {
+  CreateStoreOutput,
+  StorePickupAddress,
+} from "@/domain/store/types";
 import { AppError } from "@/shared/errors/AppError";
 import { HttpStatus } from "@/shared/http/statuses";
 
@@ -72,6 +75,57 @@ export class PrismaStoreRepository implements IStoreRepository {
     await prisma.store.update({
       where: { id: storeId },
       data: { whatsapp },
+    });
+  }
+
+  async findPickupAddress(storeId: string): Promise<StorePickupAddress | null> {
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: {
+        pickupLocationName: true,
+        pickupStreet: true,
+        pickupNumber: true,
+        pickupNeighborhood: true,
+        pickupCity: true,
+        pickupComplement: true,
+        pickupReference: true,
+      },
+    });
+    if (
+      !store ||
+      !store.pickupLocationName ||
+      !store.pickupStreet ||
+      !store.pickupNumber ||
+      !store.pickupNeighborhood ||
+      !store.pickupCity
+    )
+      return null;
+    return {
+      locationName: store.pickupLocationName,
+      street: store.pickupStreet,
+      number: store.pickupNumber,
+      neighborhood: store.pickupNeighborhood,
+      city: store.pickupCity,
+      complement: store.pickupComplement,
+      reference: store.pickupReference,
+    };
+  }
+
+  async updatePickupAddress(
+    storeId: string,
+    address: StorePickupAddress,
+  ): Promise<void> {
+    await prisma.store.update({
+      where: { id: storeId },
+      data: {
+        pickupLocationName: address.locationName,
+        pickupStreet: address.street,
+        pickupNumber: address.number,
+        pickupNeighborhood: address.neighborhood,
+        pickupCity: address.city,
+        pickupComplement: address.complement,
+        pickupReference: address.reference,
+      },
     });
   }
 }

@@ -1,4 +1,4 @@
-import type { CreateStoreOutput } from "./types";
+import type { CreateStoreOutput, StorePickupAddress } from "./types";
 
 /**
  * Repository interface for Store persistence.
@@ -32,4 +32,13 @@ export interface IStoreRepository {
 
   /** Persists a new WhatsApp number for the store. */
   updateWhatsapp(storeId: string, whatsapp: string): Promise<void>;
+
+  /** Returns the store's configured pickup address, or null when not set. */
+  findPickupAddress(storeId: string): Promise<StorePickupAddress | null>;
+
+  /** Persists the store's pickup address. Overwrites any existing values. */
+  updatePickupAddress(
+    storeId: string,
+    address: StorePickupAddress,
+  ): Promise<void>;
 }

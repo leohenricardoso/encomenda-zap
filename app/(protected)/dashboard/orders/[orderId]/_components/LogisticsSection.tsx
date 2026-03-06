@@ -1,4 +1,5 @@
 import { FulfillmentType } from "@/domain/order/Order";
+import type { StorePickupAddress } from "@/domain/store/types";
 import { formatLongDate, formatCep } from "./helpers";
 import { SectionTitle } from "./CustomerSection";
 
@@ -8,6 +9,7 @@ interface LogisticsSectionProps {
   fulfillmentType: FulfillmentType;
   deliveryDate: Date;
   pickupTime: string | null;
+  pickupAddress: StorePickupAddress | null;
   // DELIVERY fields
   deliveryCep: string | null;
   deliveryStreet: string | null;
@@ -24,6 +26,7 @@ export function LogisticsSection({
   fulfillmentType,
   deliveryDate,
   pickupTime,
+  pickupAddress,
   deliveryCep,
   deliveryStreet,
   deliveryNumber,
@@ -79,6 +82,36 @@ export function LogisticsSection({
             label="Horário"
             value={
               <span className="font-semibold tabular-nums">{pickupTime}</span>
+            }
+          />
+        )}
+
+        {/* Pickup address */}
+        {isPickup && (
+          <LogRow
+            icon={<MapPinIcon />}
+            label="Endereço"
+            value={
+              pickupAddress ? (
+                <span className="text-right leading-snug">
+                  {[
+                    pickupAddress.locationName,
+                    `${pickupAddress.street}, ${pickupAddress.number}`,
+                    pickupAddress.neighborhood,
+                    pickupAddress.city,
+                    pickupAddress.complement ?? undefined,
+                    pickupAddress.reference
+                      ? `Ref: ${pickupAddress.reference}`
+                      : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              ) : (
+                <span className="italic text-foreground-muted">
+                  A informar após confirmação
+                </span>
+              )
             }
           />
         )}

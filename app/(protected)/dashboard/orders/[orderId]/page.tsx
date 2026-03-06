@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
-import { getOrderUseCase, getStoreMessagesUseCase } from "@/infra/composition";
+import {
+  getOrderUseCase,
+  getStoreMessagesUseCase,
+  getStorePickupAddressUseCase,
+} from "@/infra/composition";
 import { CustomerSection } from "./_components/CustomerSection";
 import { LogisticsSection } from "./_components/LogisticsSection";
 import { ItemsSection } from "./_components/ItemsSection";
@@ -41,9 +45,10 @@ interface Props {
 export default async function OrderDetailPage({ params }: Props) {
   const [session, { orderId }] = await Promise.all([getSession(), params]);
 
-  const [order, msgConfig] = await Promise.all([
+  const [order, msgConfig, pickupAddress] = await Promise.all([
     getOrderUseCase.execute(orderId, session.storeId),
     getStoreMessagesUseCase.execute(session.storeId),
+    getStorePickupAddressUseCase.execute(session.storeId),
   ]);
   if (!order) notFound();
 
@@ -138,6 +143,7 @@ export default async function OrderDetailPage({ params }: Props) {
             fulfillmentType={order.fulfillmentType}
             deliveryDate={order.deliveryDate}
             pickupTime={order.pickupTime}
+            pickupAddress={pickupAddress}
             deliveryCep={order.deliveryCep}
             deliveryStreet={order.deliveryStreet}
             deliveryNumber={order.deliveryNumber}

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getStoreCatalogUseCase } from "@/infra/composition";
+import type { StorePickupAddress } from "@/domain/store/types";
 import { OrderReviewClient } from "./_components/OrderReviewClient";
 
 // ─── Route params ─────────────────────────────────────────────────────────────
@@ -24,14 +26,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * /catalog/[storeSlug]/pedido/revisar
  *
  * Public page — no auth required.
- * Wraps the stateful OrderReviewClient (Client Component) that reads
- * sessionStorage to display the cart and customer data.
- *
- * Rendering: dynamic — no data fetching here; all state lives on the client.
+ * Loads store catalog to surface the configured pickup address for the client.
  */
 export const dynamic = "force-dynamic";
 
 export default async function RevisarPage({ params }: Props) {
   const { storeSlug } = await params;
-  return <OrderReviewClient storeSlug={storeSlug} />;
+
+  let pickupAddress: StorePickupAddress | null = null;
+  try {
+    const catalog = await getStoreCatalogUseCase.execute(storeSlug);
+    pickupAddress = catalog.pickupAddress;
+  } catch {
+    // Store not found or DB error — proceed without address
+  }
+
+  return (
+    <OrderReviewClient
+      storeSlug={storeSlug}
+      initialPickupAddress={pickupAddress}
+    />
+  );
 }

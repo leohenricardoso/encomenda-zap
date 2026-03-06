@@ -17,6 +17,14 @@ model Store {
   slug      String?  @unique
   whatsapp  String
   isActive  Boolean  @default(true)
+  // ─── Pickup address (optional — store configures this in settings)
+  pickupLocationName   String?
+  pickupStreet         String?
+  pickupNumber         String?
+  pickupNeighborhood   String?
+  pickupCity           String?
+  pickupComplement     String?
+  pickupReference      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

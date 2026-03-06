@@ -17,3 +17,19 @@ export interface CreateStoreOutput {
   storeId: string;
   adminId: string;
 }
+
+// ─── Pickup Address ─────────────────────────────────────────────────────────
+
+/**
+ * Store's physical pickup address — configured by the storeowner in settings.
+ * All primary fields are required when present; complement and reference are optional.
+ */
+export interface StorePickupAddress {
+  locationName: string;
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  complement: string | null;
+  reference: string | null;
+}
