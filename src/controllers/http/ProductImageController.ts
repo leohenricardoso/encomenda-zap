@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { AppError } from "@/shared/errors/AppError";
 import { HttpStatus } from "@/shared/http/statuses";
-import { ok, created, noContent, errorResponse } from "@/shared/http";
+import { ok, created, errorResponse } from "@/shared/http";
 import {
   withAuth,
   type AuthenticatedRequest,
@@ -89,8 +89,11 @@ export class ProductImageController {
     ): Promise<NextResponse> => {
       const imageId = await this.extractParamId(args, "imageId");
       try {
-        await this.removeImageUseCase.execute(imageId, req.session.storeId);
-        return noContent();
+        const remaining = await this.removeImageUseCase.execute(
+          imageId,
+          req.session.storeId,
+        );
+        return ok(remaining);
       } catch (err) {
         return errorResponse(
           err instanceof AppError ? err : new AppError("Unexpected error."),

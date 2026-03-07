@@ -92,4 +92,42 @@ export class PrismaProductImageRepository implements IProductImageRepository {
       return null;
     }
   }
+
+  /**
+   * Re-assigns contiguous positions (1, 2, 3…) to remaining images.
+   *
+   * The @@unique([productId, position]) constraint makes a naive sequential
+   * update fail when two images would transiently share a position.  We avoid
+   * this with a two-pass transaction:
+   *   Pass 1 — move each image to a safe temp slot (100 + current position)
+   *            so the 1-3 range is fully vacated.
+   *   Pass 2 — assign the final sequential positions (1, 2, 3…).
+   */
+  async repackPositions(productId: string, storeId: string): Promise<void> {
+    const images = await prisma.productImage.findMany({
+      where: { productId, storeId },
+      orderBy: { position: "asc" },
+      select: { id: true },
+    });
+
+    if (images.length === 0) return;
+
+    await prisma.$transaction(async (tx) => {
+      // Pass 1: move to temp positions to vacate the 1-3 range
+      for (let i = 0; i < images.length; i++) {
+        await tx.productImage.update({
+          where: { id: images[i].id },
+          data: { position: 100 + i + 1 },
+        });
+      }
+
+      // Pass 2: assign final sequential positions
+      for (let i = 0; i < images.length; i++) {
+        await tx.productImage.update({
+          where: { id: images[i].id },
+          data: { position: i + 1 },
+        });
+      }
+    });
+  }
 }

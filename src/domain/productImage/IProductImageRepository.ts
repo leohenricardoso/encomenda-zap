@@ -47,4 +47,13 @@ export interface IProductImageRepository {
    * Returns the total number of images for a product (0–3).
    */
   countByProduct(productId: string): Promise<number>;
+
+  /**
+   * Re-assigns contiguous positions (1, 2, 3…) to the remaining images
+   * after a deletion, ordered by their current position ascending.
+   *
+   * Must be called after delete() to close any gap that was left.
+   * No-op when zero images remain.
+   */
+  repackPositions(productId: string, storeId: string): Promise<void>;
 }

@@ -117,6 +117,14 @@ export function ProductImageUploader({ productId, initialImages }: Props) {
     [slots],
   );
 
+  const isRemovingAny = useMemo(
+    () => Object.values(slots).some((s) => s.kind === "deleting"),
+    [slots],
+  );
+
+  // Disable all interactions while any upload or removal is in progress
+  const isBusy = isUploadingAny || isRemovingAny;
+
   const nextEmptyPos = useMemo((): Position | null => {
     for (const pos of POSITIONS) {
       if (slots[pos].kind === "empty") return pos;
@@ -196,15 +204,68 @@ export function ProductImageUploader({ productId, initialImages }: Props) {
       const slot = slots[pos];
       if (slot.kind !== "uploaded") return;
 
+      // Ask for confirmation before making any network call
+      if (
+        !window.confirm("Remover esta imagem? A ação não pode ser desfeita.")
+      ) {
+        return;
+      }
+
+      // Optimistic UI: show spinner overlay on this slot
+      const savedSlot = slot;
+      setSlots((prev) => ({
+        ...prev,
+        [pos]: {
+          kind: "deleting",
+          id: savedSlot.id,
+          imageUrl: savedSlot.imageUrl,
+        },
+      }));
+
       try {
-        const res = await fetch(`/api/products/images/${slot.id}`, {
+        const res = await fetch(`/api/products/images/${savedSlot.id}`, {
           method: "DELETE",
         });
-        if (!res.ok && res.status !== 204) {
-          throw new Error("Não foi possível remover a imagem.");
+
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            error?: { message?: string };
+          };
+          throw new Error(
+            body.error?.message ?? "Não foi possível remover a imagem.",
+          );
         }
-        setSlots((prev) => ({ ...prev, [pos]: { kind: "empty" } }));
+
+        // Backend returns the updated image list after position repack
+        const body = (await res.json()) as {
+          success: boolean;
+          data: Array<{ id: string; imageUrl: string; position: number }>;
+        };
+
+        // Rebuild all slots from the server's canonical state
+        setSlots((prev) => {
+          const next: Slots = {
+            1: prev[1].kind === "uploading" ? prev[1] : { kind: "empty" },
+            2: prev[2].kind === "uploading" ? prev[2] : { kind: "empty" },
+            3: prev[3].kind === "uploading" ? prev[3] : { kind: "empty" },
+          };
+          for (const img of body.data) {
+            const p = img.position as Position;
+            if (p === 1 || p === 2 || p === 3) {
+              next[p] = {
+                kind: "uploaded",
+                id: img.id,
+                imageUrl: img.imageUrl,
+              };
+            }
+          }
+          return next;
+        });
+
+        showToast("✓ Imagem removida com sucesso.");
       } catch (err) {
+        // Restore the slot to its prior state on failure
+        setSlots((prev) => ({ ...prev, [pos]: savedSlot }));
         showToast(err instanceof Error ? err.message : "Erro ao remover.");
       }
     },
@@ -282,7 +343,7 @@ export function ProductImageUploader({ productId, initialImages }: Props) {
             position={pos}
             state={slots[pos]}
             isPrimary={pos === 1}
-            disabled={isUploadingAny}
+            disabled={isBusy}
             onFileSelected={handleFileSelected}
             onRemove={() => void handleRemove(pos)}
             onSetPrimary={() => void handleSetPrimary(pos)}
@@ -295,13 +356,21 @@ export function ProductImageUploader({ productId, initialImages }: Props) {
         <div
           role="alert"
           aria-live="assertive"
-          className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700"
+          className={[
+            "flex items-start gap-2 rounded-lg border px-4 py-3 text-xs",
+            toast.startsWith("\u2713")
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-700",
+          ].join(" ")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="mt-px h-4 w-4 shrink-0 text-red-500"
+            className={[
+              "mt-px h-4 w-4 shrink-0",
+              toast.startsWith("✓") ? "text-green-600" : "text-red-500",
+            ].join(" ")}
             aria-hidden="true"
           >
             <path
@@ -315,7 +384,12 @@ export function ProductImageUploader({ productId, initialImages }: Props) {
             type="button"
             onClick={() => setToast(null)}
             aria-label="Fechar"
-            className="ml-auto shrink-0 text-red-500 hover:text-red-700"
+            className={[
+              "ml-auto shrink-0",
+              toast.startsWith("✓")
+                ? "text-green-600 hover:text-green-800"
+                : "text-red-500 hover:text-red-700",
+            ].join(" ")}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
