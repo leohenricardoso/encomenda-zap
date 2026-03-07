@@ -6,7 +6,7 @@ import {
   getProductImagesUseCase,
 } from "@/infra/composition";
 import { ProductForm } from "../../_components/ProductForm";
-import { ImageManager } from "../../_components/ImageManager";
+import { ProductImageUploader } from "../../_components/ProductImageUploader";
 
 export const metadata = { title: "Editar Produto" };
 
@@ -48,7 +48,10 @@ export default async function EditProductPage({ params }: Props) {
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Editar produto</h1>
       <p className="text-sm text-gray-500 mb-6">{product!.name}</p>
 
-      <ImageManager productId={product!.id} initialImages={productImages} />
+      <ProductImageUploader
+        productId={product!.id}
+        initialImages={productImages}
+      />
 
       <div className="mt-8" />
 

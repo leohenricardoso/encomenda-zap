@@ -85,6 +85,7 @@ export class ProductImageUploadController {
           position: image.position,
         });
       } catch (err) {
+        console.log("Error in ProductImageUploadController.upload:", err);
         return errorResponse(
           err instanceof AppError ? err : new AppError("Unexpected error."),
         );

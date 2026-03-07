@@ -1,5 +1,5 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client, S3_BUCKET } from "./s3Client";
+import { s3Client, S3_BUCKET, AWS_REGION } from "./s3Client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,8 +49,8 @@ export async function uploadProductImage({
     }),
   );
 
-  const region = process.env.AWS_REGION ?? "sa-east-1";
-  const imageUrl = `https://${S3_BUCKET}.s3.${region}.amazonaws.com/${key}`;
+  // Use the module-level constant so the URL always matches the configured region.
+  const imageUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
 
   return { key, imageUrl };
 }

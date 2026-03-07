@@ -72,6 +72,7 @@ export class ProductController {
         });
         return created(product);
       } catch (err) {
+        console.log("Error in ProductController.create:", err);
         return errorResponse(
           err instanceof AppError ? err : new AppError("Unexpected error."),
         );
