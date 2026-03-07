@@ -79,3 +79,35 @@ export interface UpdateCustomerInput {
 
 /** Safe public shape returned by all use cases and API routes. */
 export type CustomerResponse = Customer;
+
+// ─── CustomerWithStats ─────────────────────────────────────────────────────────────────
+
+/**
+ * Aggregated read-model used by the customer listing dashboard.
+ * Never used in write commands.
+ */
+export interface CustomerWithStats extends Customer {
+  /** Total number of orders placed by this customer within the store. */
+  ordersCount: number;
+  /** Sum of all order line totals (unitPrice − discountAmount) × quantity. */
+  totalSpent: number;
+  /** totalSpent / ordersCount, or 0 when ordersCount === 0. */
+  avgTicket: number;
+  /** Date of the very first order, or null if the customer has none. */
+  firstOrderAt: Date | null;
+  /** Date of the most recent order, or null if the customer has none. */
+  lastOrderAt: Date | null;
+}
+
+/**
+ * Filters accepted by findAllByStoreWithStats.
+ * All fields are optional and AND-combined.
+ */
+export interface CustomerFilters {
+  /** Case-insensitive partial match on name or whatsapp. */
+  search?: string;
+  /** Return only customers with at least this many orders. */
+  minOrders?: number;
+  /** Return only customers whose totalSpent is at least this amount. */
+  minTotalSpent?: number;
+}

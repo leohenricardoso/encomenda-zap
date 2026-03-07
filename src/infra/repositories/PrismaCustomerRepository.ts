@@ -2,6 +2,8 @@ import { prisma } from "@/infra/prisma";
 import type { ICustomerRepository } from "@/domain/customer/ICustomerRepository";
 import {
   type Customer,
+  type CustomerWithStats,
+  type CustomerFilters,
   type CreateCustomerInput,
   type UpdateCustomerInput,
   normalizeWhatsApp,
@@ -45,6 +47,83 @@ export class PrismaCustomerRepository implements ICustomerRepository {
       orderBy: { name: "asc" },
     });
     return rows.map((r) => this.toEntity(r));
+  }
+
+  async findAllByStoreWithStats(
+    storeId: string,
+    filters?: CustomerFilters,
+  ): Promise<CustomerWithStats[]> {
+    // Build the optional name / whatsapp search clause
+    const searchClause = filters?.search
+      ? {
+          OR: [
+            {
+              name: { contains: filters.search, mode: "insensitive" as const },
+            },
+            {
+              whatsapp: {
+                contains: filters.search,
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {};
+
+    const rows = await prisma.customer.findMany({
+      where: { storeId, ...searchClause },
+      orderBy: { name: "asc" },
+      include: {
+        orders: {
+          orderBy: { createdAt: "asc" },
+          include: { items: true },
+        },
+      },
+    });
+
+    // Compute per-customer aggregates in-process.
+    const withStats: CustomerWithStats[] = rows.map((r) => {
+      const orders = r.orders;
+      const ordersCount = orders.length;
+
+      const totalSpent = orders.reduce((sum, o) => {
+        const orderTotal = o.items.reduce(
+          (s, item) =>
+            s +
+            (Number(item.unitPrice) - Number(item.discountAmount)) *
+              item.quantity,
+          0,
+        );
+        return sum + orderTotal;
+      }, 0);
+
+      const avgTicket = ordersCount > 0 ? totalSpent / ordersCount : 0;
+
+      const firstOrderAt = ordersCount > 0 ? orders[0]!.createdAt : null;
+      const lastOrderAt =
+        ordersCount > 0 ? orders[ordersCount - 1]!.createdAt : null;
+
+      return {
+        ...this.toEntity(r),
+        ordersCount,
+        totalSpent,
+        avgTicket,
+        firstOrderAt,
+        lastOrderAt,
+      };
+    });
+
+    // Post-aggregation filters (cannot be done at DB level without raw SQL)
+    return withStats.filter((c) => {
+      if (filters?.minOrders !== undefined && c.ordersCount < filters.minOrders)
+        return false;
+      if (
+        filters?.minTotalSpent !== undefined &&
+        c.totalSpent < filters.minTotalSpent
+      )
+        return false;
+      return true;
+    });
   }
 
   async findById(id: string, storeId: string): Promise<Customer | null> {

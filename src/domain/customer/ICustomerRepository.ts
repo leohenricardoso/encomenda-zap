@@ -1,5 +1,7 @@
 import type {
   Customer,
+  CustomerWithStats,
+  CustomerFilters,
   CreateCustomerInput,
   UpdateCustomerInput,
 } from "./Customer";
@@ -15,6 +17,16 @@ export interface ICustomerRepository {
    * Returns all customers that belong to the given store, ordered by name.
    */
   findAllByStore(storeId: string): Promise<Customer[]>;
+
+  /**
+   * Returns all customers with aggregated order statistics.
+   * Supports optional filters for search and minimum thresholds.
+   * Used by the customer listing dashboard.
+   */
+  findAllByStoreWithStats(
+    storeId: string,
+    filters?: CustomerFilters,
+  ): Promise<CustomerWithStats[]>;
 
   /**
    * Returns the customer by id within the store, or null if not found.

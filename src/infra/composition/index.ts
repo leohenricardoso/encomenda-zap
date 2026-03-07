@@ -58,6 +58,7 @@ import { GetStoreCatalogUseCase } from "@/application/catalog/GetStoreCatalogUse
 import { PlaceOrderService } from "@/application/order/PlaceOrderService";
 import { ListOrdersUseCase } from "@/application/order/ListOrdersUseCase";
 import { GetOrderUseCase } from "@/application/order/GetOrderUseCase";
+import { ListCustomersWithStatsUseCase } from "@/application/customer/ListCustomersWithStatsUseCase";
 import { GetStoreScheduleUseCase } from "@/application/schedule/GetStoreScheduleUseCase";
 import { SetDayAvailabilityUseCase } from "@/application/schedule/SetDayAvailabilityUseCase";
 import { ListPickupSlotsUseCase } from "@/application/pickupSlot/ListPickupSlotsUseCase";
@@ -153,6 +154,9 @@ export const placeOrderController = new PlaceOrderController(placeOrderService);
 
 export const listOrdersUseCase = new ListOrdersUseCase(orderRepo);
 export const getOrderUseCase = new GetOrderUseCase(orderRepo);
+export const listCustomersWithStatsUseCase = new ListCustomersWithStatsUseCase(
+  customerRepo,
+);
 
 /**
  * Use case singletons — available for direct use in Server Components.

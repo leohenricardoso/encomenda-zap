@@ -8,6 +8,8 @@ interface PaginationProps {
   page: number;
   limit: number;
   total: number;
+  /** The noun to use in the count label. Defaults to "pedidos". */
+  noun?: string;
 }
 
 const LIMIT_OPTIONS = [10, 25, 50];
@@ -20,7 +22,12 @@ const LIMIT_OPTIONS = [10, 25, 50];
  * Syncs with URL search params (`page` and `limit`).
  * Designed to live alongside the orders table.
  */
-export function Pagination({ page, limit, total }: PaginationProps) {
+export function Pagination({
+  page,
+  limit,
+  total,
+  noun = "pedidos",
+}: PaginationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -62,7 +69,7 @@ export function Pagination({ page, limit, total }: PaginationProps) {
             <span className="font-medium text-foreground tabular-nums">
               {total}
             </span>{" "}
-            pedidos
+            {noun}
           </>
         )}
       </p>
