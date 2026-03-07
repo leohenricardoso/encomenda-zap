@@ -3,6 +3,7 @@ import type { ICatalogRepository } from "@/domain/catalog/ICatalogRepository";
 import type {
   StoreCatalog,
   CatalogProduct,
+  CatalogImage,
   CatalogVariant,
 } from "@/domain/catalog/types";
 import type { PricingType } from "@/domain/product/Product";
@@ -62,9 +63,8 @@ export class PrismaCatalogRepository implements ICatalogRepository {
               },
             },
             images: {
-              where: { position: 1 },
-              select: { imageUrl: true },
-              take: 1,
+              orderBy: { position: "asc" },
+              select: { id: true, imageUrl: true, position: true },
             },
           },
         },
@@ -111,16 +111,23 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         PrismaVariant,
         "id" | "label" | "price" | "pricingType" | "isActive" | "sortOrder"
       >[];
-      images: Pick<PrismaImage, "imageUrl">[];
+      images: Pick<PrismaImage, "id" | "imageUrl" | "position">[];
     },
   ): CatalogProduct {
+    const imageMapped: CatalogImage[] = raw.images.map((img) => ({
+      id: img.id,
+      imageUrl: img.imageUrl,
+      position: img.position,
+    }));
+
     return {
       id: raw.id,
       name: raw.name,
       description: raw.description,
       price: raw.price !== null ? Number(raw.price) : null,
       minQuantity: raw.minQuantity,
-      mainImageUrl: raw.images[0]?.imageUrl ?? null,
+      mainImageUrl: imageMapped[0]?.imageUrl ?? null,
+      images: imageMapped,
       variants: raw.variants.map((v) => this.toVariant(v)),
     };
   }

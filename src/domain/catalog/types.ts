@@ -11,6 +11,18 @@ import type { StorePickupAddress } from "@/domain/store/types";
  * Future: add `imageUrl`, `tags`, and other discovery-relevant fields here.
  */
 
+// ─── Catalog Image ──────────────────────────────────────────────────────────
+
+/**
+ * A single image belonging to a catalog product.
+ * Ordered by position; position 1 is always the main/primary image.
+ */
+export interface CatalogImage {
+  id: string;
+  imageUrl: string;
+  position: number;
+}
+
 // ─── Catalog Variant ─────────────────────────────────────────────────────────
 
 export interface CatalogVariant {
@@ -36,6 +48,11 @@ export interface CatalogProduct {
   minQuantity: number;
   /** Public URL of the main image (position = 1), or null when no images exist. */
   mainImageUrl: string | null;
+  /**
+   * All images ordered by position (1 = primary, 2 = secondary, 3 = tertiary).
+   * Empty array when no images have been uploaded.
+   */
+  images: CatalogImage[];
   variants: CatalogVariant[];
 }
 
