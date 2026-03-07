@@ -206,4 +206,9 @@ export interface OrderFilters {
   deliveryDateFrom?: Date;
   /** Only orders with deliveryDate <= this value. */
   deliveryDateTo?: Date;
+  /**
+   * Free-text search across customer name and whatsapp number.
+   * Case-insensitive. Applied as a Prisma `contains` filter.
+   */
+  customerSearch?: string;
 }

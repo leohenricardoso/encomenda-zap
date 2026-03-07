@@ -160,6 +160,26 @@ export class PrismaOrderRepository implements IOrderRepository {
               },
             }
           : {}),
+        ...(filters?.customerSearch
+          ? {
+              customer: {
+                OR: [
+                  {
+                    name: {
+                      contains: filters.customerSearch,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                  {
+                    whatsapp: {
+                      contains: filters.customerSearch,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                ],
+              },
+            }
+          : {}),
       },
       include: {
         customer: { select: { name: true, whatsapp: true } },

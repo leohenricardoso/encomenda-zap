@@ -29,5 +29,9 @@ export interface OrderViewModel {
    * Per-store sequential order number (e.g. 42 → displayed as #42).
    * Null for orders created before this feature was introduced.
    */
-  orderNumber: number | null;
+  orderNumber: number | null; /**
+   * ISO date-time string (YYYY-MM-DDTHH:mm:ss.sssZ) — when the order was placed.
+   * Used in the table view "Data do pedido" column.
+   */
+  createdAt: string;
 }

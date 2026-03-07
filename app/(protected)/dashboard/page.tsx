@@ -60,6 +60,7 @@ function toViewModel(order: OrderWithDetails): OrderViewModel {
     totalAmount,
     products,
     orderNumber: order.orderNumber,
+    createdAt: order.createdAt.toISOString(),
   };
 }
 
