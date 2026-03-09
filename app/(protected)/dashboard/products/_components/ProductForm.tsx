@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { NewProductImagePicker } from "./NewProductImagePicker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,9 @@ export function ProductForm({ productId, initialValues }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  /** Files staged for upload in create mode (uploaded after product creation). */
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
 
   // ─── Validation ────────────────────────────────────────────────────────────
 
@@ -198,6 +202,33 @@ export function ProductForm({ productId, initialValues }: Props) {
         return;
       }
 
+      // ── After product CREATION: upload any pending images ─────────────────
+      // Parse the response to get the new product's ID. This is safe to call
+      // once — the body has not been consumed yet at this point.
+      if (!isEditMode && pendingImages.length > 0) {
+        const created = (await res.json().catch(() => null)) as {
+          id?: string;
+        } | null;
+        const newProductId = created?.id;
+
+        if (newProductId) {
+          // Upload sequentially — best effort (server can fail one without
+          // blocking the rest; user can add missed images in edit mode).
+          for (const file of pendingImages) {
+            try {
+              const form = new FormData();
+              form.append("file", file);
+              await fetch(`/api/products/${newProductId}/images/upload`, {
+                method: "POST",
+                body: form,
+              });
+            } catch {
+              // Ignore individual upload failures — product already exists.
+            }
+          }
+        }
+      }
+
       router.push("/dashboard/products");
       router.refresh();
     } catch {
@@ -221,6 +252,14 @@ export function ProductForm({ productId, initialValues }: Props) {
         >
           {serverError}
         </div>
+      )}
+
+      {/* Image picker — only rendered in create mode */}
+      {!isEditMode && (
+        <NewProductImagePicker
+          files={pendingImages}
+          onChange={setPendingImages}
+        />
       )}
 
       {/* Name */}

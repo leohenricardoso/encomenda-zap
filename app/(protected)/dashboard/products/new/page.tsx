@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ProductForm } from "../_components/ProductForm";
-import { ProductImageUploader } from "../_components/ProductImageUploader";
 
 export const metadata = { title: "Novo Produto" };
 
