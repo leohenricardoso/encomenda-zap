@@ -1,4 +1,5 @@
 import type { CatalogVariant } from "@/domain/catalog/types";
+import { formatWeight } from "@/shared/utils/formatWeight";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -46,14 +47,23 @@ export function PriceDisplay({
 
   // ── Variant selected ────────────────────────────────────────────────────────
   if (selectedVariant) {
+    const weight =
+      selectedVariant.pricingType === "WEIGHT"
+        ? formatWeight(selectedVariant.weightValue, selectedVariant.weightUnit)
+        : null;
+
     return (
       <span className="text-lg font-semibold text-[rgb(var(--color-text))]">
         {formatCurrency(selectedVariant.price)}
-        {selectedVariant.pricingType === "WEIGHT" && (
+        {weight ? (
+          <span className="ml-1 text-sm font-normal text-[rgb(var(--color-text-muted))]">
+            / {weight}
+          </span>
+        ) : selectedVariant.pricingType === "WEIGHT" ? (
           <span className="ml-1 text-sm font-normal text-[rgb(var(--color-text-muted))]">
             /kg
           </span>
-        )}
+        ) : null}
       </span>
     );
   }

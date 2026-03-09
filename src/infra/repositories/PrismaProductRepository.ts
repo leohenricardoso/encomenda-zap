@@ -8,6 +8,7 @@ import type {
   CreateVariantInput,
   UpdateVariantInput,
   PricingType,
+  WeightUnit,
 } from "@/domain/product/Product";
 import type { ProductImage } from "@/domain/productImage/ProductImage";
 import type {
@@ -81,6 +82,8 @@ export class PrismaProductRepository implements IProductRepository {
       label: raw.label,
       price: Number(raw.price),
       pricingType: raw.pricingType as PricingType,
+      weightValue: raw.weightValue !== null ? Number(raw.weightValue) : null,
+      weightUnit: (raw.weightUnit as WeightUnit | null) ?? null,
       isActive: raw.isActive,
       sortOrder: raw.sortOrder,
       createdAt: raw.createdAt,
@@ -141,6 +144,10 @@ export class PrismaProductRepository implements IProductRepository {
                 label: v.label,
                 price: v.price,
                 pricingType: v.pricingType,
+                weightValue:
+                  v.pricingType === "WEIGHT" ? (v.weightValue ?? null) : null,
+                weightUnit:
+                  v.pricingType === "WEIGHT" ? (v.weightUnit ?? null) : null,
                 isActive: v.isActive ?? true,
                 sortOrder: v.sortOrder ?? i,
               })),
@@ -202,6 +209,10 @@ export class PrismaProductRepository implements IProductRepository {
         label: input.label,
         price: input.price,
         pricingType: input.pricingType,
+        weightValue:
+          input.pricingType === "WEIGHT" ? (input.weightValue ?? null) : null,
+        weightUnit:
+          input.pricingType === "WEIGHT" ? (input.weightUnit ?? null) : null,
         isActive: input.isActive ?? true,
         sortOrder: input.sortOrder ?? 0,
       },
@@ -222,6 +233,12 @@ export class PrismaProductRepository implements IProductRepository {
           ...(input.price !== undefined && { price: input.price }),
           ...(input.pricingType !== undefined && {
             pricingType: input.pricingType,
+          }),
+          ...(input.weightValue !== undefined && {
+            weightValue: input.weightValue,
+          }),
+          ...(input.weightUnit !== undefined && {
+            weightUnit: input.weightUnit,
           }),
           ...(input.isActive !== undefined && { isActive: input.isActive }),
           ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),
@@ -264,6 +281,10 @@ export class PrismaProductRepository implements IProductRepository {
             label: v.label,
             price: v.price,
             pricingType: v.pricingType,
+            weightValue:
+              v.pricingType === "WEIGHT" ? (v.weightValue ?? null) : null,
+            weightUnit:
+              v.pricingType === "WEIGHT" ? (v.weightUnit ?? null) : null,
             isActive: v.isActive ?? true,
             sortOrder: v.sortOrder ?? i,
           },

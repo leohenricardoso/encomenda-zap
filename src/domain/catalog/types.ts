@@ -30,6 +30,10 @@ export interface CatalogVariant {
   label: string;
   price: number;
   pricingType: PricingType;
+  /** Base weight quantity for WEIGHT-priced variants (e.g. 250). Null for UNIT. */
+  weightValue: number | null;
+  /** Unit of weight: "g" or "kg". Null for UNIT variants. */
+  weightUnit: string | null;
   isActive: boolean;
   sortOrder: number;
 }

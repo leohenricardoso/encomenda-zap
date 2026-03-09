@@ -7,6 +7,7 @@ import type {
 } from "@/domain/product/Product";
 
 const MAX_LABEL_LENGTH = 100;
+const VALID_WEIGHT_UNITS = ["g", "kg"] as const;
 
 /**
  * UpdateVariantUseCase
@@ -55,6 +56,31 @@ export class UpdateVariantUseCase {
         "Invalid pricingType. Must be UNIT or WEIGHT.",
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    // When switching to WEIGHT pricing, weight fields become required.
+    const effectivePricingType = input.pricingType;
+    if (effectivePricingType === "WEIGHT") {
+      if (input.weightValue !== undefined && input.weightValue !== null) {
+        if (typeof input.weightValue !== "number" || input.weightValue <= 0) {
+          throw new AppError(
+            "weightValue must be a positive number for WEIGHT pricing.",
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+      }
+      if (
+        input.weightUnit !== undefined &&
+        input.weightUnit !== null &&
+        !VALID_WEIGHT_UNITS.includes(
+          input.weightUnit as (typeof VALID_WEIGHT_UNITS)[number],
+        )
+      ) {
+        throw new AppError(
+          'weightUnit must be \"g\" or \"kg\".',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
 
     const updated = await this.repo.updateVariant(variantId, storeId, input);

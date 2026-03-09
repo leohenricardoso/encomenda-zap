@@ -89,6 +89,20 @@ export class UpdateProductUseCase {
             HttpStatus.BAD_REQUEST,
           );
         }
+        if (v.pricingType === "WEIGHT") {
+          if (typeof v.weightValue !== "number" || v.weightValue <= 0) {
+            throw new AppError(
+              `Variant "${v.label}": weightValue must be a positive number for WEIGHT pricing.`,
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+          if (v.weightUnit !== "g" && v.weightUnit !== "kg") {
+            throw new AppError(
+              `Variant "${v.label}": weightUnit must be "g" or "kg" for WEIGHT pricing.`,
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+        }
       }
     }
 

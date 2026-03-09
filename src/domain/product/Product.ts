@@ -24,6 +24,13 @@ import type { ProductImage } from "@/domain/productImage/ProductImage";
  */
 export type PricingType = "UNIT" | "WEIGHT";
 
+/**
+ * Unit of weight used for WEIGHT-priced variants.
+ *   g  — grams (e.g. 250g)
+ *   kg — kilograms (e.g. 1kg)
+ */
+export type WeightUnit = "g" | "kg";
+
 // ─── ProductVariant entity ────────────────────────────────────────────────────
 
 export interface ProductVariant {
@@ -39,6 +46,16 @@ export interface ProductVariant {
   /** Price for this specific variant in the store currency */
   price: number;
   pricingType: PricingType;
+  /**
+   * Base weight quantity for WEIGHT-priced variants (e.g. 250 for "250g").
+   * null when pricingType is UNIT.
+   */
+  weightValue: number | null;
+  /**
+   * Unit of weight: "g" or "kg".
+   * null when pricingType is UNIT.
+   */
+  weightUnit: WeightUnit | null;
   isActive: boolean;
   /** Display order within the product's variant list (lower = first) */
   sortOrder: number;
@@ -82,6 +99,10 @@ export interface CreateVariantInput {
   label: string;
   price: number;
   pricingType: PricingType;
+  /** Required when pricingType is WEIGHT. Must be > 0. */
+  weightValue?: number | null;
+  /** Required when pricingType is WEIGHT. */
+  weightUnit?: WeightUnit | null;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -90,6 +111,10 @@ export interface UpdateVariantInput {
   label?: string;
   price?: number;
   pricingType?: PricingType;
+  /** Set to null to clear. Required when pricingType is being set to WEIGHT. */
+  weightValue?: number | null;
+  /** Set to null to clear. Required when pricingType is being set to WEIGHT. */
+  weightUnit?: WeightUnit | null;
   isActive?: boolean;
   sortOrder?: number;
 }

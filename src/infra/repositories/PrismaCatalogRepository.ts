@@ -58,6 +58,8 @@ export class PrismaCatalogRepository implements ICatalogRepository {
                 label: true,
                 price: true,
                 pricingType: true,
+                weightValue: true,
+                weightUnit: true,
                 isActive: true,
                 sortOrder: true,
               },
@@ -109,7 +111,14 @@ export class PrismaCatalogRepository implements ICatalogRepository {
     > & {
       variants: Pick<
         PrismaVariant,
-        "id" | "label" | "price" | "pricingType" | "isActive" | "sortOrder"
+        | "id"
+        | "label"
+        | "price"
+        | "pricingType"
+        | "weightValue"
+        | "weightUnit"
+        | "isActive"
+        | "sortOrder"
       >[];
       images: Pick<PrismaImage, "id" | "imageUrl" | "position">[];
     },
@@ -135,7 +144,14 @@ export class PrismaCatalogRepository implements ICatalogRepository {
   private toVariant(
     raw: Pick<
       PrismaVariant,
-      "id" | "label" | "price" | "pricingType" | "isActive" | "sortOrder"
+      | "id"
+      | "label"
+      | "price"
+      | "pricingType"
+      | "weightValue"
+      | "weightUnit"
+      | "isActive"
+      | "sortOrder"
     >,
   ): CatalogVariant {
     return {
@@ -143,6 +159,8 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       label: raw.label,
       price: Number(raw.price),
       pricingType: raw.pricingType as PricingType,
+      weightValue: raw.weightValue !== null ? Number(raw.weightValue) : null,
+      weightUnit: raw.weightUnit ?? null,
       isActive: raw.isActive,
       sortOrder: raw.sortOrder,
     };

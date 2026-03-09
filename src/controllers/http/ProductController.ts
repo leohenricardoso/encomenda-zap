@@ -65,6 +65,15 @@ export class ProductController {
                   v.pricingType === "WEIGHT"
                     ? ("WEIGHT" as const)
                     : ("UNIT" as const),
+                weightValue:
+                  v.pricingType === "WEIGHT" && v.weightValue != null
+                    ? Number(v.weightValue)
+                    : null,
+                weightUnit:
+                  v.pricingType === "WEIGHT" &&
+                  (v.weightUnit === "g" || v.weightUnit === "kg")
+                    ? v.weightUnit
+                    : null,
                 isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
                 sortOrder: v.sortOrder !== undefined ? Number(v.sortOrder) : 0,
               }))
@@ -158,6 +167,15 @@ export class ProductController {
                     v.pricingType === "WEIGHT"
                       ? ("WEIGHT" as const)
                       : ("UNIT" as const),
+                  weightValue:
+                    v.pricingType === "WEIGHT" && v.weightValue != null
+                      ? Number(v.weightValue)
+                      : null,
+                  weightUnit:
+                    v.pricingType === "WEIGHT" &&
+                    (v.weightUnit === "g" || v.weightUnit === "kg")
+                      ? v.weightUnit
+                      : null,
                   isActive:
                     v.isActive !== undefined ? Boolean(v.isActive) : true,
                   sortOrder:

@@ -7,6 +7,7 @@ import type {
 } from "@/domain/product/Product";
 
 const MAX_LABEL_LENGTH = 100;
+const VALID_WEIGHT_UNITS = ["g", "kg"] as const;
 
 /**
  * CreateVariantUseCase
@@ -18,6 +19,7 @@ const MAX_LABEL_LENGTH = 100;
  * - label must be non-empty and ≤ MAX_LABEL_LENGTH
  * - price must be > 0
  * - pricingType must be a known value
+ * - when pricingType is WEIGHT: weightValue must be > 0 and weightUnit must be "g" or "kg"
  */
 export class CreateVariantUseCase {
   constructor(private readonly repo: IProductRepository) {}
@@ -49,10 +51,34 @@ export class CreateVariantUseCase {
       );
     }
 
+    if (input.pricingType === "WEIGHT") {
+      if (typeof input.weightValue !== "number" || input.weightValue <= 0) {
+        throw new AppError(
+          "weightValue must be a positive number for WEIGHT pricing.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (
+        !input.weightUnit ||
+        !VALID_WEIGHT_UNITS.includes(
+          input.weightUnit as (typeof VALID_WEIGHT_UNITS)[number],
+        )
+      ) {
+        throw new AppError(
+          'weightUnit must be \"g\" or \"kg\" for WEIGHT pricing.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
     return this.repo.createVariant(productId, storeId, {
       label: input.label.trim(),
       price: input.price,
       pricingType: input.pricingType,
+      weightValue:
+        input.pricingType === "WEIGHT" ? (input.weightValue ?? null) : null,
+      weightUnit:
+        input.pricingType === "WEIGHT" ? (input.weightUnit ?? null) : null,
       isActive: input.isActive ?? true,
       sortOrder: input.sortOrder ?? 0,
     });

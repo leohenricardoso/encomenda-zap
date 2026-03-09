@@ -37,7 +37,15 @@ export class ProductVariantController {
     ): Promise<NextResponse> => {
       const { productId } = await this.extractIds(args);
       const body = await this.parseJsonBody(req);
-      const { label, price, pricingType, isActive, sortOrder } = body;
+      const {
+        label,
+        price,
+        pricingType,
+        weightValue,
+        weightUnit,
+        isActive,
+        sortOrder,
+      } = body;
 
       try {
         const variant = await this.createVariantUseCase.execute(
@@ -47,6 +55,11 @@ export class ProductVariantController {
             label: String(label ?? ""),
             price: Number(price),
             pricingType: this.parsePricingType(pricingType),
+            weightValue:
+              weightValue !== undefined && weightValue !== null
+                ? Number(weightValue)
+                : null,
+            weightUnit: this.parseWeightUnit(weightUnit),
             isActive: isActive !== undefined ? Boolean(isActive) : true,
             sortOrder: sortOrder !== undefined ? Number(sortOrder) : 0,
           },
@@ -69,7 +82,15 @@ export class ProductVariantController {
     ): Promise<NextResponse> => {
       const { variantId } = await this.extractIds(args);
       const body = await this.parseJsonBody(req);
-      const { label, price, pricingType, isActive, sortOrder } = body;
+      const {
+        label,
+        price,
+        pricingType,
+        weightValue,
+        weightUnit,
+        isActive,
+        sortOrder,
+      } = body;
 
       try {
         const variant = await this.updateVariantUseCase.execute(
@@ -80,6 +101,12 @@ export class ProductVariantController {
             ...(price !== undefined && { price: Number(price) }),
             ...(pricingType !== undefined && {
               pricingType: this.parsePricingType(pricingType),
+            }),
+            ...(weightValue !== undefined && {
+              weightValue: weightValue !== null ? Number(weightValue) : null,
+            }),
+            ...(weightUnit !== undefined && {
+              weightUnit: this.parseWeightUnit(weightUnit),
             }),
             ...(isActive !== undefined && { isActive: Boolean(isActive) }),
             ...(sortOrder !== undefined && { sortOrder: Number(sortOrder) }),
@@ -138,5 +165,10 @@ export class ProductVariantController {
 
   private parsePricingType(value: unknown): PricingType {
     return value === "WEIGHT" ? "WEIGHT" : "UNIT";
+  }
+
+  private parseWeightUnit(value: unknown): "g" | "kg" | null {
+    if (value === "g" || value === "kg") return value;
+    return null;
   }
 }

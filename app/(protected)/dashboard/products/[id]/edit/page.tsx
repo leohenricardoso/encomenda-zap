@@ -67,6 +67,8 @@ export default async function EditProductPage({ params }: Props) {
             label: v.label,
             price: v.price.toFixed(2),
             pricingType: v.pricingType,
+            weightValue: v.weightValue != null ? String(v.weightValue) : "",
+            weightUnit: (v.weightUnit ?? "g") as "g" | "kg",
             isActive: v.isActive,
           })),
         }}

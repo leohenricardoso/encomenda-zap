@@ -11,6 +11,10 @@ interface VariantRow {
   label: string;
   price: string;
   pricingType: PricingType;
+  /** Numeric weight as a string (empty when not applicable) */
+  weightValue: string;
+  /** Unit of weight — defaults to "g" */
+  weightUnit: "g" | "kg";
   isActive: boolean;
 }
 
@@ -42,6 +46,8 @@ const EMPTY_VARIANT: VariantRow = {
   label: "",
   price: "",
   pricingType: "UNIT",
+  weightValue: "",
+  weightUnit: "g",
   isActive: true,
 };
 
@@ -96,6 +102,13 @@ export function ProductForm({ productId, initialValues }: Props) {
       const vPrice = parseFloat(v.price.replace(",", "."));
       if (!v.price.trim() || isNaN(vPrice) || vPrice <= 0)
         next[`variant_${i}_price`] = "Preço deve ser maior que zero.";
+
+      if (v.pricingType === "WEIGHT") {
+        const wVal = parseFloat(v.weightValue.replace(",", "."));
+        if (!v.weightValue.trim() || isNaN(wVal) || wVal <= 0) {
+          next[`variant_${i}_weightValue`] = "Peso deve ser maior que zero.";
+        }
+      }
     });
 
     setErrors(next);
@@ -152,6 +165,11 @@ export function ProductForm({ productId, initialValues }: Props) {
         label: v.label.trim(),
         price: parseFloat(v.price.replace(",", ".")),
         pricingType: v.pricingType,
+        weightValue:
+          v.pricingType === "WEIGHT" && v.weightValue.trim()
+            ? parseFloat(v.weightValue.replace(",", "."))
+            : null,
+        weightUnit: v.pricingType === "WEIGHT" ? v.weightUnit : null,
         isActive: v.isActive,
         sortOrder: i,
       }));
@@ -430,6 +448,53 @@ export function ProductForm({ productId, initialValues }: Props) {
                   </select>
                 </div>
               </div>
+
+              {/* Weight fields — visible only for WEIGHT pricing */}
+              {variant.pricingType === "WEIGHT" && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Peso base da variação{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0.001}
+                      step="any"
+                      value={variant.weightValue}
+                      onChange={(e) =>
+                        updateVariant(i, "weightValue", e.target.value)
+                      }
+                      placeholder="250"
+                      className={`flex-1 rounded-md border px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        errors[`variant_${i}_weightValue`]
+                          ? "border-red-400"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    <select
+                      value={variant.weightUnit}
+                      onChange={(e) =>
+                        updateVariant(
+                          i,
+                          "weightUnit",
+                          e.target.value as "g" | "kg",
+                        )
+                      }
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    >
+                      <option value="g">Gramas (g)</option>
+                      <option value="kg">Quilogramas (kg)</option>
+                    </select>
+                  </div>
+                  {errors[`variant_${i}_weightValue`] && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {errors[`variant_${i}_weightValue`]}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <input

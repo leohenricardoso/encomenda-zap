@@ -136,6 +136,10 @@ model ProductVariant {
   label       String
   price       Decimal     @db.Decimal(10, 2)
   pricingType PricingType @default(UNIT)
+  /// Numeric weight for WEIGHT-priced variants (e.g. 250 for "250g"). Null for UNIT variants.
+  weightValue Decimal?    @db.Decimal(10, 2)
+  /// Unit of weight: "g" (grams) or "kg" (kilograms). Null for UNIT variants.
+  weightUnit  String?
   isActive    Boolean     @default(true)
   /// Display order within the product's variant list (lower = first).
   sortOrder   Int         @default(0)
