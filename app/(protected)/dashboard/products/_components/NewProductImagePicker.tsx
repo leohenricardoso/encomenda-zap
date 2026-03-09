@@ -38,24 +38,18 @@ const MAX_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
  */
 export function NewProductImagePicker({ files, onChange }: Props) {
   // ── Object URL management ─────────────────────────────────────────────────
-  // Create preview URLs synchronously so they are available on first render.
-  // Track them in a ref so the cleanup effect always sees the latest set.
-  const [previews, setPreviews] = useState<string[]>([]);
-  const prevPreviewsRef = useRef<string[]>([]);
+  // We keep a stable cache (ref) and create/revoke URLs synchronously inside
+  // useMemo so there is never a render where files[i] has no matching URL.
+  // A single unmount-only effect handles the final cleanup.
+  const urlCacheRef = useRef(new Map<File, string>());
 
   useEffect(() => {
-    // Revoke previous URLs before creating new ones
-    prevPreviewsRef.current.forEach((u) => URL.revokeObjectURL(u));
-    const urls = files.map((f) => URL.createObjectURL(f));
-    prevPreviewsRef.current = urls;
-    setPreviews(urls);
-
+    // Only revoke all URLs on unmount — no cleanup between renders.
     return () => {
-      // Also revoke on unmount
-      urls.forEach((u) => URL.revokeObjectURL(u));
+      for (const url of urlCacheRef.current.values()) URL.revokeObjectURL(url);
+      urlCacheRef.current.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files]);
+  }, []);
 
   // ── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState<string | null>(null);
@@ -70,6 +64,25 @@ export function NewProductImagePicker({ files, onChange }: Props) {
   // ── Derive slot states from the files array ───────────────────────────────
 
   const slots: Record<Position, SlotState> = useMemo(() => {
+    const cache = urlCacheRef.current;
+    const fileSet = new Set(files);
+
+    // Revoke and evict URLs for files no longer in the list
+    for (const [file, url] of [...cache.entries()]) {
+      if (!fileSet.has(file)) {
+        URL.revokeObjectURL(url);
+        cache.delete(file);
+      }
+    }
+
+    // Create URLs synchronously for any new file — no async effect needed
+    for (const file of files) {
+      if (!cache.has(file)) {
+        cache.set(file, URL.createObjectURL(file));
+      }
+    }
+
+    // Build slot states — each file always maps to its own URL by reference
     const result: Record<Position, SlotState> = {
       1: { kind: "empty" },
       2: { kind: "empty" },
@@ -77,17 +90,14 @@ export function NewProductImagePicker({ files, onChange }: Props) {
     };
     for (let i = 0; i < Math.min(files.length, 3); i++) {
       const pos = (i + 1) as Position;
-      const previewUrl = previews[i] ?? "";
-      if (previewUrl) {
-        result[pos] = {
-          kind: "uploaded",
-          id: `pending-${i}`,
-          imageUrl: previewUrl,
-        };
-      }
+      result[pos] = {
+        kind: "uploaded",
+        id: `pending-${i}`,
+        imageUrl: cache.get(files[i])!,
+      };
     }
     return result;
-  }, [files, previews]);
+  }, [files]);
 
   const nextEmptyPos = useMemo((): Position | null => {
     for (const pos of POSITIONS) {

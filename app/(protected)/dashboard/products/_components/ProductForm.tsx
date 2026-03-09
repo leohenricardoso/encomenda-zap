@@ -207,9 +207,9 @@ export function ProductForm({ productId, initialValues }: Props) {
       // once — the body has not been consumed yet at this point.
       if (!isEditMode && pendingImages.length > 0) {
         const created = (await res.json().catch(() => null)) as {
-          id?: string;
+          data?: { id?: string };
         } | null;
-        const newProductId = created?.id;
+        const newProductId = created?.data?.id;
 
         if (newProductId) {
           // Upload sequentially — best effort (server can fail one without
