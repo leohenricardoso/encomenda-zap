@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { CatalogProduct } from "@/domain/catalog/types";
 import { ImageGallery } from "./ImageGallery";
 import { PriceDisplay } from "./PriceDisplay";
@@ -59,18 +60,30 @@ export function CatalogProductCard({
       ].join(" ")}
     >
       {/* ── Image gallery / placeholder ───────────────────────────────── */}
-      <ImageGallery images={product.images} productName={product.name} />
+      <Link
+        href={`/catalog/${storeSlug}/${product.id}`}
+        aria-label={`Ver detalhes de ${product.name}`}
+        className="block overflow-hidden"
+        tabIndex={-1}
+      >
+        <ImageGallery images={product.images} productName={product.name} />
+      </Link>
 
       {/* ── Body ──────────────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col gap-3 p-4">
         {/* Product name + description */}
         <div className="flex-1">
-          <h2
-            className="text-sm font-semibold text-[rgb(var(--color-text))] leading-snug"
-            title={product.name}
+          <Link
+            href={`/catalog/${storeSlug}/${product.id}`}
+            className="group/name focus-visible:outline-none"
           >
-            {product.name}
-          </h2>
+            <h2
+              className="text-sm font-semibold text-[rgb(var(--color-text))] leading-snug group-hover/name:underline"
+              title={product.name}
+            >
+              {product.name}
+            </h2>
+          </Link>
 
           {product.description && (
             <p className="mt-1 line-clamp-2 text-xs text-[rgb(var(--color-text-muted))] leading-relaxed">
