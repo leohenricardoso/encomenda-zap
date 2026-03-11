@@ -126,6 +126,8 @@ export interface Order {
    * Always set on new orders.
    */
   orderNumber: number | null;
+  /** Delivery fee frozen at order creation time. 0 for pickup orders or free delivery. */
+  deliveryFee: number;
   /** Current lifecycle state — always starts as PENDING. */
   status: OrderStatus;
   createdAt: Date;
@@ -152,7 +154,10 @@ export interface CreateOrderInput {
   shippingAddress?:
     | string
     | null; /** Optional customer note for the order. Persisted as-is. */
-  notes?: string | null; /**
+  notes?: string | null;
+  /** Delivery fee to freeze on the order. 0 for pickup. */
+  deliveryFee?: number;
+  /**
    * Not accepted here — new orders always start as PENDING (domain invariant).
    * Status is driven exclusively through IOrderRepository.updateStatus().
    */

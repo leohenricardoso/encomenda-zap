@@ -11,8 +11,10 @@ import { HttpStatus } from "@/shared/http/statuses";
  * Resolves storeSlug → storeId via the catalog repository, then checks
  * whether the provided CEP falls within ANY of the store’s configured ranges.
  *
- * When no ranges are configured the result is { valid: true, unrestricted: true }.
+ * When no ranges are configured the result is { valid: true, unrestricted: true,
+ * deliveryFee: store.defaultDeliveryFee }.
  * A CEP is valid if: cepStart ≤ cep ≤ cepEnd for at least one range.
+ * Returns the deliveryFee from the matching range.
  */
 export class ValidateCepUseCase {
   constructor(
@@ -45,14 +47,26 @@ export class ValidateCepUseCase {
 
     // No ranges configured → unrestricted delivery
     if (ranges.length === 0) {
-      return { valid: true, unrestricted: true };
+      return {
+        valid: true,
+        unrestricted: true,
+        deliveryFee: catalog.defaultDeliveryFee,
+      };
     }
 
-    // CEP is valid if it falls within ANY range
-    const valid = ranges.some(
+    // Find the matching range (first match — ranges should not overlap)
+    const matchedRange = ranges.find(
       (r) => digits >= r.cepStart && digits <= r.cepEnd,
     );
 
-    return { valid, unrestricted: false };
+    if (!matchedRange) {
+      return { valid: false, unrestricted: false, deliveryFee: 0 };
+    }
+
+    return {
+      valid: true,
+      unrestricted: false,
+      deliveryFee: matchedRange.deliveryFee,
+    };
   }
 }

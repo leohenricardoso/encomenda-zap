@@ -12,6 +12,7 @@ import type { ICustomerRepository } from "@/domain/customer/ICustomerRepository"
 import type { IProductRepository } from "@/domain/product/IProductRepository";
 import type { IOrderRepository } from "@/domain/order/IOrderRepository";
 import type { IOrderItemRepository } from "@/domain/order/IOrderItemRepository";
+import type { IStoreCepRangeRepository } from "@/domain/cepRange/IStoreCepRangeRepository";
 import type { CreateOrderItemInput } from "@/domain/order/OrderItem";
 import type { StorePickupAddress } from "@/domain/store/types";
 
@@ -92,6 +93,11 @@ export interface PlaceOrderOutput {
   /** Legacy: populated from structured delivery fields. */
   shippingAddress: string | null;
   deliveryDate: Date;
+  /** Sum of all line totals (items only, excluding delivery fee). */
+  subtotal: number;
+  /** Delivery fee frozen at order creation time. 0 for pickup or free delivery. */
+  deliveryFee: number;
+  /** Grand total = subtotal + deliveryFee. */
   total: number;
   createdAt: Date;
   /** Optional customer note, forwarded verbatim. */
@@ -148,6 +154,7 @@ export class PlaceOrderService {
     private readonly productRepo: IProductRepository,
     private readonly orderRepo: IOrderRepository,
     private readonly orderItemRepo: IOrderItemRepository,
+    private readonly cepRangeRepo: IStoreCepRangeRepository,
   ) {}
 
   async execute(input: PlaceOrderInput): Promise<PlaceOrderOutput> {
@@ -234,7 +241,25 @@ export class PlaceOrderService {
       name: storeName,
       whatsapp: storeWhatsapp,
       pickupAddress,
+      defaultDeliveryFee,
     } = catalog;
+
+    // ── 2b. Resolve delivery fee (DELIVERY orders only) ─────────────────────
+
+    let deliveryFee = 0;
+    if (input.fulfillmentType === FulfillmentType.DELIVERY) {
+      const cepDigits = (input.deliveryCep ?? "").replace(/\D/g, "");
+      const ranges = await this.cepRangeRepo.findByStore(storeId);
+      if (ranges.length === 0) {
+        // Unrestricted delivery — use store default
+        deliveryFee = defaultDeliveryFee;
+      } else {
+        const matchedRange = ranges.find(
+          (r) => cepDigits >= r.cepStart && cepDigits <= r.cepEnd,
+        );
+        deliveryFee = matchedRange ? matchedRange.deliveryFee : 0;
+      }
+    }
 
     // ── 3. Upsert customer ───────────────────────────────────────────────────
 
@@ -371,6 +396,7 @@ export class PlaceOrderService {
       deliveryCity: input.deliveryCity ?? null,
       shippingAddress,
       notes: input.notes ? input.notes.trim().slice(0, 500) : null,
+      deliveryFee,
     });
 
     // ── 7. Create items (backfill orderId now that we have it) ───────────────
@@ -392,6 +418,9 @@ export class PlaceOrderService {
       lineTotal: computeLineTotal(item),
     }));
 
+    const subtotal = computeOrderTotal(createdItems);
+    const grandTotal = subtotal + deliveryFee;
+
     return {
       reference: order.id,
       status: order.status,
@@ -410,7 +439,9 @@ export class PlaceOrderService {
       deliveryCity: order.deliveryCity,
       shippingAddress: order.shippingAddress,
       deliveryDate: order.deliveryDate,
-      total: computeOrderTotal(createdItems),
+      subtotal,
+      deliveryFee,
+      total: grandTotal,
       createdAt: order.createdAt,
       notes: order.notes,
       orderNumber: order.orderNumber,

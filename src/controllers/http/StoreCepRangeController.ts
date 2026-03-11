@@ -59,10 +59,17 @@ export class StoreCepRangeController {
       }
 
       try {
+        const rawFee = body.deliveryFee;
+        const deliveryFee =
+          typeof rawFee === "number" && Number.isFinite(rawFee) && rawFee >= 0
+            ? rawFee
+            : 0;
+
         const range = await this.addUseCase.execute(
           req.session.storeId,
           String(body.cepStart ?? ""),
           String(body.cepEnd ?? ""),
+          deliveryFee,
         );
         return ok({ range });
       } catch (err) {
@@ -117,4 +124,3 @@ export class StoreCepRangeController {
     }
   };
 }
-

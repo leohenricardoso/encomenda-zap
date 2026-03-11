@@ -17,6 +17,8 @@ model Store {
   slug      String?  @unique
   whatsapp  String
   isActive  Boolean  @default(true)
+  /// Default delivery fee applied when no CEP ranges are configured (unrestricted delivery).
+  defaultDeliveryFee Decimal @default(0) @db.Decimal(10, 2)
   // ─── Pickup address (optional — store configures this in settings)
   pickupLocationName   String?
   pickupStreet         String?
@@ -243,6 +245,8 @@ model Order {
   /// Per-store sequential number shown to customers and the store owner (e.g. #42).
   /// Generated atomically on creation; NULL only for orders migrated from before this field.
   orderNumber     Int?
+  /// Delivery fee frozen at order creation time (0 for pickup orders or free delivery).
+  deliveryFee     Decimal  @default(0) @db.Decimal(10, 2)
   /// Current lifecycle state. Always starts as PENDING.
   status          OrderStatus     @default(PENDING)
   createdAt       DateTime        @default(now())
@@ -436,6 +440,8 @@ model StoreCepRange {
   cepStart  String
   /// Last CEP of the delivery range. 8 digits, no hyphen (e.g. "01319999").
   cepEnd    String
+  /// Delivery fee applied when the customer's CEP falls within this range.
+  deliveryFee Decimal @default(0) @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

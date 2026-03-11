@@ -32,6 +32,7 @@ export class AddCepRangeUseCase {
     storeId: string,
     rawStart: string,
     rawEnd: string,
+    deliveryFee = 0,
   ): Promise<StoreCepRange> {
     if (!storeId?.trim()) {
       throw new AppError("storeId is required.", HttpStatus.BAD_REQUEST);
@@ -47,7 +48,18 @@ export class AddCepRangeUseCase {
       );
     }
 
-    return this.repo.create(storeId, cepStart, cepEnd);
+    if (
+      typeof deliveryFee !== "number" ||
+      !Number.isFinite(deliveryFee) ||
+      deliveryFee < 0
+    ) {
+      throw new AppError(
+        "Taxa de entrega deve ser um valor positivo.",
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    return this.repo.create(storeId, cepStart, cepEnd, deliveryFee);
   }
 }
 

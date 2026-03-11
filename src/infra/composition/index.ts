@@ -75,6 +75,7 @@ import { GetStoreWhatsappUseCase } from "@/application/store/GetStoreWhatsappUse
 import { UpdateStoreWhatsappUseCase } from "@/application/store/UpdateStoreWhatsappUseCase";
 import { GetStorePickupAddressUseCase } from "@/application/store/GetStorePickupAddressUseCase";
 import { UpdateStorePickupAddressUseCase } from "@/application/store/UpdateStorePickupAddressUseCase";
+import { UpdateDefaultDeliveryFeeUseCase } from "@/application/store/UpdateDefaultDeliveryFeeUseCase";
 import { AddProductImageUseCase } from "@/application/productImage/AddProductImageUseCase";
 import { GetProductImagesUseCase } from "@/application/productImage/GetProductImagesUseCase";
 import { RemoveProductImageUseCase } from "@/application/productImage/RemoveProductImageUseCase";
@@ -149,6 +150,7 @@ const placeOrderService = new PlaceOrderService(
   productRepo,
   orderRepo,
   orderItemRepo,
+  cepRangeRepo,
 );
 export const placeOrderController = new PlaceOrderController(placeOrderService);
 
@@ -266,3 +268,9 @@ export const getStorePickupAddressUseCase = new GetStorePickupAddressUseCase(
 );
 export const updateStorePickupAddressUseCase =
   new UpdateStorePickupAddressUseCase(storeRepo);
+
+export const updateDefaultDeliveryFeeUseCase =
+  new UpdateDefaultDeliveryFeeUseCase(storeRepo);
+
+// Helper: read default delivery fee directly via storeRepo
+export { storeRepo };

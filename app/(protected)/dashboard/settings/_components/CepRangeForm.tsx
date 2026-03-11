@@ -38,6 +38,7 @@ interface CepRange {
   id: string;
   cepStart: string; // 8-digit raw
   cepEnd: string; // 8-digit raw
+  deliveryFee: number;
 }
 
 interface CepRangeFormProps {
@@ -52,6 +53,7 @@ export function CepRangeForm({ initialRanges }: CepRangeFormProps) {
   // New-range form state
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+  const [newFee, setNewFee] = useState("");
   const [addStatus, setAddStatus] = useState<"idle" | "adding" | "error">(
     "idle",
   );
@@ -75,6 +77,9 @@ export function CepRangeForm({ initialRanges }: CepRangeFormProps) {
     if (s.length !== 8) return "CEP inicial inválido — insira 8 dígitos.";
     if (e.length !== 8) return "CEP final inválido — insira 8 dígitos.";
     if (s > e) return "CEP inicial deve ser menor ou igual ao CEP final.";
+    const fee = parseFloat(newFee.replace(",", "."));
+    if (newFee.trim() !== "" && (!Number.isFinite(fee) || fee < 0))
+      return "Taxa de entrega inválida.";
     return null;
   }
 
@@ -96,6 +101,8 @@ export function CepRangeForm({ initialRanges }: CepRangeFormProps) {
         body: JSON.stringify({
           cepStart: rawCep(newStart),
           cepEnd: rawCep(newEnd),
+          deliveryFee:
+            newFee.trim() === "" ? 0 : parseFloat(newFee.replace(",", ".")),
         }),
       });
 
@@ -108,6 +115,7 @@ export function CepRangeForm({ initialRanges }: CepRangeFormProps) {
       setRanges((prev) => [...prev, data.data.range]);
       setNewStart("");
       setNewEnd("");
+      setNewFee("");
       setAddStatus("idle");
       flash("Faixa adicionada com sucesso.");
     } catch (e) {
@@ -201,7 +209,7 @@ export function CepRangeForm({ initialRanges }: CepRangeFormProps) {
                 key={r.id}
                 className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-subtle px-4 py-3"
               >
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
                   <MapPinIcon className="h-4 w-4 shrink-0 text-foreground-muted" />
                   <span className="text-sm font-mono text-foreground tabular-nums">
                     {formatCep(r.cepStart)}
@@ -210,6 +218,19 @@ export function CepRangeForm({ initialRanges }: CepRangeFormProps) {
                   <span className="text-sm font-mono text-foreground tabular-nums">
                     {formatCep(r.cepEnd)}
                   </span>
+                  <span className="mx-1 text-foreground-muted">·</span>
+                  {r.deliveryFee === 0 ? (
+                    <span className="text-xs font-medium text-green-600">
+                      Frete grátis
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold text-foreground">
+                      {r.deliveryFee.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -282,6 +303,32 @@ export function CepRangeForm({ initialRanges }: CepRangeFormProps) {
                 disabled={addStatus === "adding"}
                 onChange={(e) => {
                   setNewEnd(applyCepMask(e.target.value));
+                  if (addStatus === "error") setAddStatus("idle");
+                }}
+                className={INPUT_CLS}
+              />
+            </div>
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <label
+                htmlFor="newDeliveryFee"
+                className="text-xs font-medium text-foreground-muted"
+              >
+                Taxa de entrega (R$){" "}
+                <span className="font-normal text-foreground-muted/70">
+                  — deixe em branco para frete grátis
+                </span>
+              </label>
+              <input
+                id="newDeliveryFee"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+                value={newFee}
+                disabled={addStatus === "adding"}
+                onChange={(e) => {
+                  setNewFee(e.target.value);
                   if (addStatus === "error") setAddStatus("idle");
                 }}
                 className={INPUT_CLS}

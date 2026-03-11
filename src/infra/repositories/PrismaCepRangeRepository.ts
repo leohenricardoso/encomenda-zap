@@ -15,6 +15,7 @@ export class PrismaCepRangeRepository implements IStoreCepRangeRepository {
     storeId: string;
     cepStart: string;
     cepEnd: string;
+    deliveryFee: { toNumber(): number };
     createdAt: Date;
     updatedAt: Date;
   }): StoreCepRange {
@@ -23,6 +24,7 @@ export class PrismaCepRangeRepository implements IStoreCepRangeRepository {
       storeId: raw.storeId,
       cepStart: raw.cepStart,
       cepEnd: raw.cepEnd,
+      deliveryFee: Number(raw.deliveryFee),
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     };
@@ -44,9 +46,10 @@ export class PrismaCepRangeRepository implements IStoreCepRangeRepository {
     storeId: string,
     cepStart: string,
     cepEnd: string,
+    deliveryFee: number,
   ): Promise<StoreCepRange> {
     const row = await prisma.storeCepRange.create({
-      data: { storeId, cepStart, cepEnd },
+      data: { storeId, cepStart, cepEnd, deliveryFee },
     });
     return this.toEntity(row);
   }

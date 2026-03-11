@@ -11,6 +11,7 @@ import {
   updateItemQuantity,
   cartItemKey,
   setDeliveryAddress,
+  setDeliveryFee,
 } from "../../../_lib/cart";
 import type { CartItem, CartSession } from "../../../_lib/cart";
 import {
@@ -27,6 +28,8 @@ interface OrderConfirmation {
   reference: string;
   orderNumber: number | null;
   storeName: string;
+  subtotal: number;
+  deliveryFee: number;
   total: number;
   deliveryDate: string;
   fulfillmentType: "PICKUP" | "DELIVERY";
@@ -389,6 +392,30 @@ function SuccessView({
 
             <Divider />
 
+            {confirmation.fulfillmentType === "DELIVERY" &&
+              confirmation.deliveryFee > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-foreground-muted">Subtotal</span>
+                    <span>{formatCurrency(confirmation.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-foreground-muted">
+                      Taxa de entrega
+                    </span>
+                    <span>{formatCurrency(confirmation.deliveryFee)}</span>
+                  </div>
+                </>
+              )}
+            {confirmation.fulfillmentType === "DELIVERY" &&
+              confirmation.deliveryFee === 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-foreground-muted">Taxa de entrega</span>
+                  <span className="text-green-600 font-medium">
+                    Frete grátis
+                  </span>
+                </div>
+              )}
             <div className="flex justify-between font-semibold">
               <span>Total</span>
               <span>{formatCurrency(confirmation.total)}</span>
@@ -438,6 +465,7 @@ export function OrderReviewClient({
   const [deliveryNeighborhood, setDeliveryNeighborhoodState] =
     useState<string>("");
   const [deliveryCity, setDeliveryCityState] = useState<string>("");
+  const [deliveryFee, setDeliveryFeeState] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(
     null,
@@ -473,6 +501,36 @@ export function OrderReviewClient({
     if (cart.deliveryNeighborhood)
       setDeliveryNeighborhoodState(cart.deliveryNeighborhood);
     if (cart.deliveryCity) setDeliveryCityState(cart.deliveryCity);
+
+    // Resolve delivery fee for the stored CEP
+    if (cart.fulfillmentType === "delivery" && cart.shippingCep) {
+      if (cart.deliveryFee != null) {
+        setDeliveryFeeState(cart.deliveryFee);
+      } else {
+        const cepDigits = cart.shippingCep.replace(/\D/g, "");
+        fetch(
+          `/api/catalog/${storeSlug}/validate-cep?cep=${encodeURIComponent(cepDigits)}`,
+        )
+          .then((r) => r.json())
+          .then(
+            (res: {
+              success: boolean;
+              data?: { valid: boolean; deliveryFee?: number };
+            }) => {
+              if (res.success && res.data?.valid) {
+                const fee = res.data.deliveryFee ?? 0;
+                setDeliveryFeeState(fee);
+                const next = setDeliveryFee(cart, fee);
+                writeCart(next);
+              }
+            },
+          )
+          .catch(() => {
+            // Non-critical: fee simply stays null; validation happens server-side on submit
+          });
+      }
+    }
+
     setPageState("review");
   }, [storeSlug, router]);
 
@@ -624,7 +682,11 @@ export function OrderReviewClient({
 
   // â”€â”€ Render: review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const items = cartSession?.items ?? [];
-  const total = items.reduce((s, i) => s + i.lineTotal, 0);
+  const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
+  const total =
+    fulfillmentType === "delivery" && deliveryFee !== null
+      ? subtotal + deliveryFee
+      : subtotal;
   // The "submitting" state is handled by an early return above,
   // so isSubmitting is always false here — kept for referential clarity.
   const isSubmitting = false;
@@ -715,13 +777,35 @@ export function OrderReviewClient({
             <Divider />
 
             {/* Total */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-foreground">
-                Total do pedido
-              </p>
-              <p className="text-base font-bold text-foreground">
-                {formatCurrency(total)}
-              </p>
+            <div className="flex flex-col gap-2">
+              {fulfillmentType === "delivery" && deliveryFee !== null && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <p className="text-foreground-muted">Subtotal</p>
+                    <p className="font-medium text-foreground">
+                      {formatCurrency(subtotal)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <p className="text-foreground-muted">Taxa de entrega</p>
+                    {deliveryFee === 0 ? (
+                      <p className="font-medium text-green-600">Frete grátis</p>
+                    ) : (
+                      <p className="font-medium text-foreground">
+                        {formatCurrency(deliveryFee)}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  Total do pedido
+                </p>
+                <p className="text-base font-bold text-foreground">
+                  {formatCurrency(total)}
+                </p>
+              </div>
             </div>
 
             <Divider />

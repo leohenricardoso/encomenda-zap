@@ -44,6 +44,7 @@ export class PrismaOrderRepository implements IOrderRepository {
     shippingAddress: string | null;
     notes: string | null;
     orderNumber: number | null;
+    deliveryFee: { toNumber(): number };
     status: string;
     createdAt: Date;
     updatedAt: Date;
@@ -64,6 +65,7 @@ export class PrismaOrderRepository implements IOrderRepository {
       shippingAddress: raw.shippingAddress,
       notes: raw.notes,
       orderNumber: raw.orderNumber,
+      deliveryFee: Number(raw.deliveryFee),
       status: raw.status as OrderStatus,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
@@ -280,6 +282,7 @@ export class PrismaOrderRepository implements IOrderRepository {
           shippingAddress: input.shippingAddress ?? null,
           notes: input.notes ?? null,
           orderNumber: counter.lastNumber,
+          deliveryFee: input.deliveryFee ?? 0,
           // status defaults to PENDING via the Prisma model default
         },
       });

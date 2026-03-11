@@ -77,6 +77,12 @@ export interface CartSession {
    * Forwarded verbatim to the backend on order submission.
    */
   notes: string | null;
+  /**
+   * Delivery fee in BRL resolved after CEP validation.
+   * null = not yet resolved (or fulfillmentType is "pickup").
+   * 0    = free delivery.
+   */
+  deliveryFee: number | null;
 }
 
 // ─── Key helpers ──────────────────────────────────────────────────────────────
@@ -150,6 +156,7 @@ export function addOrUpdateItem(
           pickupSlotId: null,
           pickupTime: null,
           notes: null,
+          deliveryFee: null,
         };
 
   const key = cartItemKey(incoming.productId, incoming.variantId);
@@ -287,6 +294,18 @@ export function setDeliveryAddress(
     }),
     ...(address.city !== undefined && { deliveryCity: address.city }),
   };
+}
+
+/**
+ * Stores the resolved delivery fee in the cart.
+ * Pass null to clear (e.g. when switching to pickup mode).
+ * Returns a new CartSession — does not call writeCart.
+ */
+export function setDeliveryFee(
+  cart: CartSession,
+  fee: number | null,
+): CartSession {
+  return { ...cart, deliveryFee: fee };
 }
 
 /**

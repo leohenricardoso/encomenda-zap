@@ -19,6 +19,8 @@ export interface StoreCepRange {
   cepStart: string;
   /** Last CEP of the range, 8 digits, no hyphen — e.g. "01319999" */
   cepEnd: string;
+  /** Delivery fee applied when the customer's CEP falls within this range. */
+  deliveryFee: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,4 +38,11 @@ export interface ValidateCepResult {
   valid: boolean;
   /** True when no range is configured for the store — delivery is unrestricted. */
   unrestricted: boolean;
+  /**
+   * Delivery fee for this CEP zone.
+   * Populated when valid = true.
+   * When unrestricted = true this is the store's defaultDeliveryFee.
+   * 0 = free delivery.
+   */
+  deliveryFee: number;
 }

@@ -75,5 +75,7 @@ export interface StoreCatalog {
   whatsapp: string;
   /** Store's physical pickup address, or null when not yet configured. */
   pickupAddress: StorePickupAddress | null;
+  /** Default delivery fee applied when delivery is unrestricted (no CEP ranges). */
+  defaultDeliveryFee: number;
   products: CatalogProduct[];
 }

@@ -128,4 +128,19 @@ export class PrismaStoreRepository implements IStoreRepository {
       },
     });
   }
+
+  async findDefaultDeliveryFee(storeId: string): Promise<number> {
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { defaultDeliveryFee: true },
+    });
+    return store ? Number(store.defaultDeliveryFee) : 0;
+  }
+
+  async updateDefaultDeliveryFee(storeId: string, fee: number): Promise<void> {
+    await prisma.store.update({
+      where: { id: storeId },
+      data: { defaultDeliveryFee: fee },
+    });
+  }
 }

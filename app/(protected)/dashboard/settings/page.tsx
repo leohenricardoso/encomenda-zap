@@ -11,20 +11,24 @@ import {
   getCepRangeUseCase,
   getStoreWhatsappUseCase,
   getStorePickupAddressUseCase,
+  storeRepo,
 } from "@/infra/composition";
 import { CepRangeForm } from "./_components/CepRangeForm";
 import { WhatsappForm } from "./_components/WhatsappForm";
 import { PickupAddressForm } from "./_components/PickupAddressForm";
+import { DefaultDeliveryFeeForm } from "./_components/DefaultDeliveryFeeForm";
 
 export default async function SettingsPage() {
   const session = await getSession();
 
   // Load existing CEP ranges (empty array = unrestricted delivery)
-  const [ranges, currentWhatsapp, pickupAddress] = await Promise.all([
-    getCepRangeUseCase.execute(session.storeId),
-    getStoreWhatsappUseCase.execute(session.storeId),
-    getStorePickupAddressUseCase.execute(session.storeId),
-  ]);
+  const [ranges, currentWhatsapp, pickupAddress, defaultDeliveryFee] =
+    await Promise.all([
+      getCepRangeUseCase.execute(session.storeId),
+      getStoreWhatsappUseCase.execute(session.storeId),
+      getStorePickupAddressUseCase.execute(session.storeId),
+      storeRepo.findDefaultDeliveryFee(session.storeId),
+    ]);
 
   return (
     <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
@@ -45,8 +49,12 @@ export default async function SettingsPage() {
             id: r.id,
             cepStart: r.cepStart,
             cepEnd: r.cepEnd,
+            deliveryFee: r.deliveryFee,
           }))}
         />
+
+        {/* ── Taxa de entrega padrão ──────────────────────────────────────── */}
+        <DefaultDeliveryFeeForm initialFee={defaultDeliveryFee} />
 
         {/* ── WhatsApp da loja ────────────────────────────────────────────── */}
         <WhatsappForm initialWhatsapp={currentWhatsapp} />

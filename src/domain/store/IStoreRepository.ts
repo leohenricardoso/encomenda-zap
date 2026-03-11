@@ -41,4 +41,10 @@ export interface IStoreRepository {
     storeId: string,
     address: StorePickupAddress,
   ): Promise<void>;
+
+  /** Returns the store's default delivery fee (0 = free delivery). */
+  findDefaultDeliveryFee(storeId: string): Promise<number>;
+
+  /** Persists the store's default delivery fee for unrestricted delivery. */
+  updateDefaultDeliveryFee(storeId: string, fee: number): Promise<void>;
 }
