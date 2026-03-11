@@ -7,8 +7,10 @@ import {
   type UpdateOrderInput,
   type OrderFilters,
   OrderStatus,
+  OrderTrackingStatus,
   FulfillmentType,
   canTransitionTo,
+  canTrackingTransitionTo,
 } from "@/domain/order/Order";
 import type { OrderItem } from "@/domain/order/OrderItem";
 
@@ -46,6 +48,7 @@ export class PrismaOrderRepository implements IOrderRepository {
     orderNumber: number | null;
     deliveryFee: { toNumber(): number };
     status: string;
+    orderStatus: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): Order {
@@ -67,6 +70,9 @@ export class PrismaOrderRepository implements IOrderRepository {
       orderNumber: raw.orderNumber,
       deliveryFee: Number(raw.deliveryFee),
       status: raw.status as OrderStatus,
+      orderStatus: raw.orderStatus
+        ? (raw.orderStatus as OrderTrackingStatus)
+        : null,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     };
@@ -360,10 +366,48 @@ export class PrismaOrderRepository implements IOrderRepository {
       );
     }
 
-    // 3. Persist
+    // 3. When approving, automatically initialise the tracking status to PENDING.
     const row = await prisma.order.update({
       where: { id, storeId },
-      data: { status: newStatus },
+      data: {
+        status: newStatus,
+        // Set tracking to PENDING on approval; clear it on rejection
+        orderStatus:
+          newStatus === OrderStatus.APPROVED
+            ? OrderTrackingStatus.PENDING
+            : newStatus === OrderStatus.REJECTED
+              ? null
+              : undefined,
+      },
+    });
+    return this.toEntity(row);
+  }
+
+  async updateTrackingStatus(
+    id: string,
+    storeId: string,
+    newStatus: OrderTrackingStatus,
+  ): Promise<Order | null> {
+    const current = await prisma.order.findFirst({
+      where: { id, storeId },
+      select: { status: true, orderStatus: true },
+    });
+
+    if (!current) return null;
+
+    const currentTracking =
+      (current.orderStatus as OrderTrackingStatus | null) ??
+      OrderTrackingStatus.PENDING;
+
+    if (!canTrackingTransitionTo(currentTracking, newStatus)) {
+      throw new Error(
+        `Invalid tracking transition: ${currentTracking} → ${newStatus}.`,
+      );
+    }
+
+    const row = await prisma.order.update({
+      where: { id, storeId },
+      data: { orderStatus: newStatus },
     });
     return this.toEntity(row);
   }

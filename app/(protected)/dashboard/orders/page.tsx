@@ -63,6 +63,7 @@ function toViewModel(order: OrderWithDetails): OrderViewModel {
     deliveryAddress,
     deliveryCep: order.deliveryCep,
     status: order.status,
+    orderStatus: order.orderStatus,
     totalAmount,
     products,
     orderNumber: order.orderNumber,

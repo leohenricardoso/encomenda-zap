@@ -1,4 +1,8 @@
-import type { FulfillmentType, OrderStatus } from "@/domain/order/Order";
+import type {
+  FulfillmentType,
+  OrderStatus,
+  OrderTrackingStatus,
+} from "@/domain/order/Order";
 
 /**
  * OrderViewModel — read-only projection of an order for dashboard display.
@@ -22,6 +26,14 @@ export interface OrderViewModel {
   /** 8-digit CEP (raw) for DELIVERY; null for PICKUP. */
   deliveryCep: string | null;
   status: OrderStatus;
+  /**
+   * Operational tracking status — non-null only when status = APPROVED.
+   * PENDING  = awaiting payment
+   * PAID     = payment confirmed
+   * DELIVERED = order handed to customer
+   * CANCELLED = cancelled after approval
+   */
+  orderStatus: OrderTrackingStatus | null;
   /** Pre-computed sum: (unitPrice − discountAmount) × quantity, in BRL. */
   totalAmount: number;
   /** Pre-formatted item labels: ["2× Bolo de Chocolate (Médio)", "1× Brigadeiro"] */

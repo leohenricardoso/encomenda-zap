@@ -9,32 +9,14 @@ import {
 import { CustomerSection } from "./_components/CustomerSection";
 import { LogisticsSection } from "./_components/LogisticsSection";
 import { ItemsSection } from "./_components/ItemsSection";
-import { StatusActions } from "./_components/StatusActions";
+import { OrderDecisionBadge } from "./_components/OrderDecisionBadge";
+import { OrderStatusManager } from "../../_components/OrderStatusManager";
 import { formatLongDate, formatCurrency } from "./_components/helpers";
-import { OrderStatus } from "@/domain/order/Order";
 import {
   DEFAULT_MESSAGES,
   resolveMessage,
   type MessageVars,
 } from "@/domain/store/StoreMessageConfig";
-
-// ─── Status badge config (server render) ─────────────────────────────────────
-
-const STATUS_BADGE: Record<OrderStatus, { label: string; className: string }> =
-  {
-    [OrderStatus.PENDING]: {
-      label: "Pendente",
-      className: "bg-amber-100 text-amber-800",
-    },
-    [OrderStatus.APPROVED]: {
-      label: "Aprovado",
-      className: "bg-green-100 text-green-800",
-    },
-    [OrderStatus.REJECTED]: {
-      label: "Recusado",
-      className: "bg-surface-hover text-foreground-muted",
-    },
-  };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -77,7 +59,6 @@ export default async function OrderDetailPage({ params }: Props) {
     ),
   )}`;
 
-  const badge = STATUS_BADGE[order.status];
   const totalAmount = order.items.reduce(
     (sum, item) => sum + (item.unitPrice - item.discountAmount) * item.quantity,
     0,
@@ -88,7 +69,7 @@ export default async function OrderDetailPage({ params }: Props) {
      * Mobile: single column. Desktop: max-width centred.
      * StatusActions is sticky-bottom on mobile, relative inside the flow on sm+.
      */
-    <div className="min-h-dvh flex flex-col pb-24 sm:pb-0">
+    <div className="min-h-dvh flex flex-col">
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur-sm px-4 py-3">
         <div className="mx-auto max-w-2xl flex items-center gap-3">
@@ -114,13 +95,8 @@ export default async function OrderDetailPage({ params }: Props) {
               {formatLongDate(order.deliveryDate)}
             </p>
           </div>
-          <span
-            className={[
-              "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold sm:hidden",
-              badge.className,
-            ].join(" ")}
-          >
-            {badge.label}
+          <span className="sm:hidden">
+            <OrderDecisionBadge status={order.status} size="sm" />
           </span>
           <span className="hidden sm:inline text-sm font-bold text-foreground tabular-nums">
             {formatCurrency(totalAmount)}
@@ -131,6 +107,15 @@ export default async function OrderDetailPage({ params }: Props) {
       {/* ── Content ──────────────────────────────────────────────────────── */}
       <div className="flex-1 px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-6">
+          {/* ── Status management (first — for immediate visibility) ───────── */}
+          <OrderStatusManager
+            orderId={order.id}
+            initialDecisionStatus={order.status}
+            initialTrackingStatus={order.orderStatus}
+            approvalWaUrl={approvalWaUrl}
+            rejectionWaUrl={rejectionWaUrl}
+          />
+
           {/* ── Customer ──────────────────────────────────────────────────── */}
           <CustomerSection
             name={order.customerName}
@@ -169,27 +154,7 @@ export default async function OrderDetailPage({ params }: Props) {
               </p>
             </section>
           )}
-
-          {/* ── Actions (sm+: rendered inline below items) ────────────────── */}
-          <div className="hidden sm:block">
-            <StatusActions
-              orderId={order.id}
-              currentStatus={order.status}
-              approvalWaUrl={approvalWaUrl}
-              rejectionWaUrl={rejectionWaUrl}
-            />
-          </div>
         </div>
-      </div>
-
-      {/* ── Actions (mobile: sticky bottom) ─────────────────────────────── */}
-      <div className="sm:hidden">
-        <StatusActions
-          orderId={order.id}
-          currentStatus={order.status}
-          approvalWaUrl={approvalWaUrl}
-          rejectionWaUrl={rejectionWaUrl}
-        />
       </div>
     </div>
   );

@@ -1,18 +1,29 @@
 "use client";
 
 /**
- * OrderCardQuickActions — inline approve / reject / WhatsApp buttons.
+ * OrderCardQuickActions — contextual lifecycle action buttons for an order card.
  *
- * Client Component: uses useTransition for optimistic status updates via
- * the updateOrderStatus Server Action.
+ * Handles the FULL order lifecycle in a single client island:
  *
- * Rejection requires a two-step inline confirmation to prevent accidental
- * actions — matching the UX of the existing detail page StatusActions.
+ *   PENDING            → Aprovar (→ awaiting_payment) | Rejeitar (→ rejected)
+ *   AWAITING_PAYMENT   → Marcar como Pago (→ paid)   | Rejeitar (→ rejected)
+ *   PAID               → Marcar como Entregue (→ delivered)
+ *   DELIVERED          → Ver detalhes link (read-only)
+ *   REJECTED/CANCELLED → footer hidden (handled in OrderCard)
+ *
+ * Optimistic updates: local state changes immediately; reverts on failure.
+ * Two-step confirmation before any reject/cancel action.
+ * Event propagation is stopped so clicks don't trigger the card-wide Link.
  */
 
 import { useTransition, useState } from "react";
-import { OrderStatus } from "@/domain/order/Order";
-import { updateOrderStatus } from "../orders/[orderId]/actions";
+import Link from "next/link";
+import { OrderStatus, OrderTrackingStatus } from "@/domain/order/Order";
+import {
+  updateOrderStatus,
+  updateOrderTrackingStatus,
+} from "../orders/[orderId]/actions";
+import { getUnifiedStatus } from "./StatusBadge";
 import { whatsAppUrl } from "../orders/[orderId]/_components/helpers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -20,6 +31,8 @@ import { whatsAppUrl } from "../orders/[orderId]/_components/helpers";
 interface OrderCardQuickActionsProps {
   orderId: string;
   initialStatus: OrderStatus;
+  /** Pass null for PENDING/REJECTED orders; set by backend on APPROVED. */
+  initialOrderStatus: OrderTrackingStatus | null;
   customerWhatsapp: string;
   customerName: string;
   orderNumber: number | null;
@@ -30,57 +43,64 @@ interface OrderCardQuickActionsProps {
 export function OrderCardQuickActions({
   orderId,
   initialStatus,
+  initialOrderStatus,
   customerWhatsapp,
   customerName,
   orderNumber,
 }: OrderCardQuickActionsProps) {
-  const [status, setStatus] = useState<OrderStatus>(initialStatus);
+  const [decisionStatus, setDecisionStatus] =
+    useState<OrderStatus>(initialStatus);
+  const [trackingStatus, setTrackingStatus] =
+    useState<OrderTrackingStatus | null>(initialOrderStatus);
   const [isPending, startTransition] = useTransition();
   const [confirmReject, setConfirmReject] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canApprove = status === OrderStatus.PENDING;
-  const canReject =
-    status === OrderStatus.PENDING || status === OrderStatus.APPROVED;
-
+  const unified = getUnifiedStatus(decisionStatus, trackingStatus);
   const waUrl = whatsAppUrl(customerWhatsapp, customerName, orderNumber);
 
-  // ── Approve ────────────────────────────────────────────────────────────────
-
-  function handleApprove(e: React.MouseEvent) {
+  // Stop both click and card-link navigation for the entire footer area
+  function stopProp(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+  }
+
+  // ── Approve (PENDING → awaiting_payment) ──────────────────────────────────
+
+  function handleApprove(e: React.MouseEvent) {
+    stopProp(e);
     setError(null);
     setConfirmReject(false);
 
     startTransition(async () => {
       const res = await updateOrderStatus(orderId, OrderStatus.APPROVED);
       if (res.success) {
-        setStatus(OrderStatus.APPROVED);
+        setDecisionStatus(OrderStatus.APPROVED);
+        // Backend auto-initialises orderStatus to PENDING on approval
+        setTrackingStatus(OrderTrackingStatus.PENDING);
       } else {
         setError(res.error);
       }
     });
   }
 
-  // ── Reject ─────────────────────────────────────────────────────────────────
+  // ── Reject / request confirmation ─────────────────────────────────────────
 
   function handleRejectRequest(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    stopProp(e);
     setConfirmReject(true);
     setError(null);
   }
 
   function handleRejectConfirm(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    stopProp(e);
     setError(null);
 
     startTransition(async () => {
       const res = await updateOrderStatus(orderId, OrderStatus.REJECTED);
       if (res.success) {
-        setStatus(OrderStatus.REJECTED);
+        setDecisionStatus(OrderStatus.REJECTED);
+        setTrackingStatus(null);
         setConfirmReject(false);
       } else {
         setError(res.error);
@@ -90,36 +110,60 @@ export function OrderCardQuickActions({
   }
 
   function handleRejectCancel(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    stopProp(e);
     setConfirmReject(false);
+  }
+
+  // ── Mark as Paid (awaiting_payment → paid) ────────────────────────────────
+
+  function handleMarkPaid(e: React.MouseEvent) {
+    stopProp(e);
+    setError(null);
+
+    startTransition(async () => {
+      const res = await updateOrderTrackingStatus(
+        orderId,
+        OrderTrackingStatus.PAID,
+      );
+      if (res.success) {
+        setTrackingStatus(OrderTrackingStatus.PAID);
+      } else {
+        setError(res.error);
+      }
+    });
+  }
+
+  // ── Mark as Delivered (paid → delivered) ──────────────────────────────────
+
+  function handleMarkDelivered(e: React.MouseEvent) {
+    stopProp(e);
+    setError(null);
+
+    startTransition(async () => {
+      const res = await updateOrderTrackingStatus(
+        orderId,
+        OrderTrackingStatus.DELIVERED,
+      );
+      if (res.success) {
+        setTrackingStatus(OrderTrackingStatus.DELIVERED);
+      } else {
+        setError(res.error);
+      }
+    });
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if (status === OrderStatus.REJECTED) return null;
-
-  if (status === OrderStatus.APPROVED && !canReject) return null;
-
   return (
-    // onClick/preventDefault here stops card-link from activating when
-    // tapping anywhere inside this actions bar on touch devices.
-    // Individual buttons also stopPropagation for precision.
-    <div
-      className="flex flex-wrap items-center gap-2"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-    >
+    <div className="flex flex-wrap items-center gap-2" onClick={stopProp}>
       {/* Error feedback */}
       {error && <p className="w-full text-xs text-danger">{error}</p>}
 
-      {/* ── Rejection confirmation state ── */}
+      {/* ── Two-step reject confirmation ── */}
       {confirmReject ? (
         <>
           <span className="text-xs text-foreground-muted">
-            Confirmar recusa?
+            Confirmar rejeição?
           </span>
           <button
             type="button"
@@ -130,7 +174,7 @@ export function OrderCardQuickActions({
             {isPending ? (
               <SpinnerIcon className="h-3 w-3 animate-spin" />
             ) : null}
-            Sim, recusar
+            Sim, rejeitar
           </button>
           <button
             type="button"
@@ -143,50 +187,50 @@ export function OrderCardQuickActions({
         </>
       ) : (
         <>
-          {/* ── Approve button ── */}
-          {canApprove && (
-            <button
-              type="button"
-              onClick={handleApprove}
-              disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {isPending ? (
-                <SpinnerIcon className="h-3 w-3 animate-spin" />
-              ) : (
-                <CheckIcon className="h-3 w-3" />
-              )}
-              Aprovar
-            </button>
-          )}
-
-          {/* ── Reject button ── */}
-          {canReject && (
-            <button
-              type="button"
-              onClick={handleRejectRequest}
-              disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-red-50 disabled:opacity-50"
-            >
-              <XIcon className="h-3 w-3" />
-              Recusar
-            </button>
+          {/* ── PENDING: Approve + Reject ── */}
+          {unified === "pending" && (
+            <>
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {isPending ? (
+                  <SpinnerIcon className="h-3 w-3 animate-spin" />
+                ) : (
+                  <CheckIcon className="h-3 w-3" />
+                )}
+                Aprovar
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectRequest}
+                disabled={isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-red-50 disabled:opacity-50"
+              >
+                <XIcon className="h-3 w-3" />
+                Rejeitar
+              </button>
+            </>
           )}
         </>
       )}
 
-      {/* ── WhatsApp button (always visible) ── */}
-      <a
-        href={waUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-[#25D366] transition-colors hover:bg-[#25D366]/10"
-        aria-label={`Contatar ${customerName} via WhatsApp`}
-      >
-        <WhatsAppIcon className="h-3.5 w-3.5 shrink-0" />
-        <span className="hidden sm:inline">WhatsApp</span>
-      </a>
+      {/* ── WhatsApp — shown for all non-terminal states ── */}
+      {unified !== "rejected" && unified !== "cancelled" && (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-[#25D366] transition-colors hover:bg-[#25D366]/10"
+          aria-label={`Contatar ${customerName} via WhatsApp`}
+        >
+          <WhatsAppIcon className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden sm:inline">WhatsApp</span>
+        </a>
+      )}
     </div>
   );
 }
@@ -226,6 +270,27 @@ function XIcon({ className }: { className?: string }) {
     >
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function TruckIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="1" y="3" width="15" height="13" />
+      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="18.5" cy="18.5" r="2.5" />
     </svg>
   );
 }

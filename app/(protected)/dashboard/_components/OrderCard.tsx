@@ -1,7 +1,15 @@
 ﻿import Link from "next/link";
 import type { OrderViewModel } from "./types";
-import { OrderStatus, FulfillmentType } from "@/domain/order/Order";
-import { StatusBadge } from "./StatusBadge";
+import {
+  OrderStatus,
+  OrderTrackingStatus,
+  FulfillmentType,
+} from "@/domain/order/Order";
+import {
+  StatusBadge,
+  getUnifiedStatus,
+  UNIFIED_STATUS_CONFIG,
+} from "./StatusBadge";
 import { OrderCardQuickActions } from "./OrderCardQuickActions";
 
 const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
@@ -31,21 +39,20 @@ interface OrderCardProps {
  * Server Component  OrderCardQuickActions is the client island.
  */
 export function OrderCard({ order }: OrderCardProps) {
-  const isRejected = order.status === OrderStatus.REJECTED;
+  const unified = getUnifiedStatus(order.status, order.orderStatus);
+  // Terminal states: dim the card and hide the actions footer
+  const isTerminal =
+    order.status === OrderStatus.REJECTED ||
+    order.orderStatus === OrderTrackingStatus.CANCELLED;
 
-  const accentBorder =
-    order.status === OrderStatus.PENDING
-      ? "border-l-amber-400"
-      : order.status === OrderStatus.APPROVED
-        ? "border-l-green-500"
-        : "border-l-line";
+  const accentBorder = UNIFIED_STATUS_CONFIG[unified].accentClass;
 
   return (
     <article
       className={[
         "relative overflow-hidden rounded-xl border border-line bg-surface",
         "transition-shadow hover:shadow-sm",
-        isRejected ? "opacity-60" : "",
+        isTerminal ? "opacity-60" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -62,7 +69,7 @@ export function OrderCard({ order }: OrderCardProps) {
             "font-semibold text-foreground leading-snug truncate",
             "hover:text-accent transition-colors",
             "after:absolute after:inset-0 after:content-[''] after:rounded-xl",
-            isRejected ? "line-through" : "",
+            isTerminal ? "line-through" : "",
           ].join(" ")}
         >
           {/* Header */}
@@ -75,7 +82,12 @@ export function OrderCard({ order }: OrderCardProps) {
               )}
               {order.customerName}
             </div>
-            <StatusBadge status={order.status} size="sm" className="shrink-0" />
+            <StatusBadge
+              status={order.status}
+              orderStatus={order.orderStatus}
+              size="sm"
+              className="shrink-0"
+            />
           </div>
 
           {/* Fulfillment row */}
@@ -142,11 +154,12 @@ export function OrderCard({ order }: OrderCardProps) {
 
       {/*  Quick-actions footer  */}
       {/* z-10 sits above the stretched-link ::after overlay */}
-      {!isRejected && (
+      {!isTerminal && (
         <div className="relative z-10 border-t border-line bg-surface-subtle/60 px-4 py-2.5">
           <OrderCardQuickActions
             orderId={order.id}
             initialStatus={order.status}
+            initialOrderStatus={order.orderStatus}
             customerWhatsapp={order.customerWhatsapp}
             customerName={order.customerName}
             orderNumber={order.orderNumber}

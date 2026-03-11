@@ -38,6 +38,23 @@ export enum OrderStatus {
   REJECTED = "REJECTED",
 }
 
+// ─── OrderTrackingStatus ─────────────────────────────────────────────────────
+
+/**
+ * Operational tracking status — active ONLY when OrderStatus = APPROVED.
+ *
+ * PENDING   → order approved, awaiting payment.
+ * PAID      → payment confirmed by the store.
+ * DELIVERED → order delivered to the customer.
+ * CANCELLED → order cancelled after approval.
+ */
+export enum OrderTrackingStatus {
+  PENDING = "PENDING",
+  PAID = "PAID",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+}
+
 // ─── FulfillmentType ──────────────────────────────────────────────────────────────
 
 /**
@@ -90,6 +107,40 @@ export function canTransitionTo(
   return (ALLOWED_TRANSITIONS[current] as OrderStatus[]).includes(next);
 }
 
+// ─── Tracking status transition machine ──────────────────────────────────────
+
+/**
+ * TRACKING_ALLOWED_TRANSITIONS — FSM for the post-approval lifecycle.
+ *
+ * PENDING  → PAID | CANCELLED
+ * PAID     → DELIVERED
+ * DELIVERED → (terminal)
+ * CANCELLED → (terminal)
+ */
+export const TRACKING_ALLOWED_TRANSITIONS: Readonly<
+  Record<OrderTrackingStatus, ReadonlyArray<OrderTrackingStatus>>
+> = {
+  [OrderTrackingStatus.PENDING]: [
+    OrderTrackingStatus.PAID,
+    OrderTrackingStatus.CANCELLED,
+  ],
+  [OrderTrackingStatus.PAID]: [OrderTrackingStatus.DELIVERED],
+  [OrderTrackingStatus.DELIVERED]: [],
+  [OrderTrackingStatus.CANCELLED]: [],
+};
+
+/**
+ * canTrackingTransitionTo — pure predicate for tracking status transitions.
+ */
+export function canTrackingTransitionTo(
+  current: OrderTrackingStatus,
+  next: OrderTrackingStatus,
+): boolean {
+  return (
+    TRACKING_ALLOWED_TRANSITIONS[current] as OrderTrackingStatus[]
+  ).includes(next);
+}
+
 // ─── Order entity ─────────────────────────────────────────────────────────────
 
 export interface Order {
@@ -128,8 +179,14 @@ export interface Order {
   orderNumber: number | null;
   /** Delivery fee frozen at order creation time. 0 for pickup orders or free delivery. */
   deliveryFee: number;
-  /** Current lifecycle state — always starts as PENDING. */
+  /** Current decision status — always starts as PENDING. */
   status: OrderStatus;
+  /**
+   * Operational tracking status.
+   * Set to PENDING automatically when the order is approved.
+   * NULL when status is PENDING or REJECTED.
+   */
+  orderStatus: OrderTrackingStatus | null;
   createdAt: Date;
   updatedAt: Date;
 }

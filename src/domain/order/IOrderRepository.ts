@@ -1,6 +1,7 @@
 import type {
   Order,
   OrderStatus,
+  OrderTrackingStatus,
   OrderWithDetails,
   CreateOrderInput,
   UpdateOrderInput,
@@ -106,6 +107,23 @@ export interface IOrderRepository {
     id: string,
     storeId: string,
     newStatus: OrderStatus,
+  ): Promise<Order | null>;
+
+  /**
+   * Transitions the order's tracking status to a new value.
+   *
+   * Preconditions:
+   *   1. Order exists and belongs to the store.
+   *   2. Order's decision status is APPROVED.
+   *   3. Transition is valid per TRACKING_ALLOWED_TRANSITIONS.
+   *
+   * Returns null  → order not found.
+   * Throws Error  → invalid transition or decision status != APPROVED.
+   */
+  updateTrackingStatus(
+    id: string,
+    storeId: string,
+    newStatus: OrderTrackingStatus,
   ): Promise<Order | null>;
 
   /**

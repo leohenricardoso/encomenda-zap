@@ -185,16 +185,24 @@ model Customer {
 }
 
 // ─── OrderStatus ──────────────────────────────────────────────────────────────
-// Lifecycle states of an Order — mirrors the domain enum in Order.ts.
-// Adding a new status requires:
-//   1. New enum value here.
-//   2. New entry in ALLOWED_TRANSITIONS (Order.ts).
-//   3. A schema migration.
+// Decision status — mirrors the domain enum in Order.ts.
+// Did the store accept or decline the order?
 
 enum OrderStatus {
   PENDING   // Created, awaiting store review.
   APPROVED  // Store accepted the order.
   REJECTED  // Store declined the order.
+}
+
+// ─── OrderTrackingStatus ──────────────────────────────────────────────────────
+// Operational tracking status — active ONLY when OrderStatus = APPROVED.
+// Represents the post-approval lifecycle of the order.
+
+enum OrderTrackingStatus {
+  PENDING    // Approved but not yet paid.
+  PAID       // Payment confirmed.
+  DELIVERED  // Order delivered to the customer.
+  CANCELLED  // Order cancelled after approval.
 }
 
 // ─── FulfillmentType ──────────────────────────────────────────────────────────
@@ -249,6 +257,9 @@ model Order {
   deliveryFee     Decimal  @default(0) @db.Decimal(10, 2)
   /// Current lifecycle state. Always starts as PENDING.
   status          OrderStatus     @default(PENDING)
+  /// Operational tracking status — set automatically to PENDING on approval;
+  /// NULL when status != APPROVED or REJECTED.
+  orderStatus     OrderTrackingStatus?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
