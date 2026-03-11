@@ -1,15 +1,13 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { OrderViewModel } from "./types";
 import { OrderStatus, FulfillmentType } from "@/domain/order/Order";
-import { StatusBadge, STATUS_CONFIG } from "./StatusBadge";
-import { whatsAppUrl } from "../orders/[orderId]/_components/helpers";
+import { StatusBadge } from "./StatusBadge";
+import { OrderCardQuickActions } from "./OrderCardQuickActions";
 
 const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
   [FulfillmentType.PICKUP]: "Retirada",
   [FulfillmentType.DELIVERY]: "Entrega",
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -18,139 +16,148 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 interface OrderCardProps {
   order: OrderViewModel;
 }
 
 /**
- * OrderCard — presentation-only card for a single order.
+ * OrderCard  SaaS-style clickable card for a single order.
  *
- * Displays: customer name, status badge, fulfillment type + time/address,
- * product list, and total amount.  No IDs are rendered.
+ * Full-card navigation via CSS stretched-link pattern:
+ *   The customer-name <Link> has ::after { position:absolute; inset:0 }
+ *   so every click on the card body triggers navigation.
+ *   The quick-actions footer uses z-10 to sit above the overlay.
  *
- * Server Component — no interactivity.  Optimistic status actions belong
- * in a future "update-status" client wrapper.
+ * Server Component  OrderCardQuickActions is the client island.
  */
 export function OrderCard({ order }: OrderCardProps) {
-  const cfg = STATUS_CONFIG[order.status];
   const isRejected = order.status === OrderStatus.REJECTED;
+
+  const accentBorder =
+    order.status === OrderStatus.PENDING
+      ? "border-l-amber-400"
+      : order.status === OrderStatus.APPROVED
+        ? "border-l-green-500"
+        : "border-l-line";
 
   return (
     <article
       className={[
-        "overflow-hidden rounded-xl border border-line bg-surface",
-        isRejected ? "opacity-55" : "",
-      ].join(" ")}
+        "relative overflow-hidden rounded-xl border border-line bg-surface",
+        "transition-shadow hover:shadow-sm",
+        isRejected ? "opacity-60" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <div className={["flex flex-col gap-3 p-4", cfg.accentClass].join(" ")}>
-        {/* ── Header: customer + status ──────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            {order.orderNumber != null && (
-              <span className="shrink-0 rounded-md bg-foreground/10 px-1.5 py-0.5 text-xs font-bold tabular-nums text-foreground">
-                #{order.orderNumber}
-              </span>
-            )}
-            <p
-              className={[
-                "font-semibold text-foreground leading-snug truncate",
-                isRejected ? "line-through" : "",
-              ].join(" ")}
-            >
+      {/*  Main card body  */}
+      <div
+        className={["flex flex-col gap-3 p-4 border-l-4", accentBorder].join(
+          " ",
+        )}
+      >
+        <Link
+          href={`/dashboard/orders/${order.id}`}
+          className={[
+            "font-semibold text-foreground leading-snug truncate",
+            "hover:text-accent transition-colors",
+            "after:absolute after:inset-0 after:content-[''] after:rounded-xl",
+            isRejected ? "line-through" : "",
+          ].join(" ")}
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              {order.orderNumber != null && (
+                <span className="shrink-0 rounded-md border border-line bg-surface-subtle px-1.5 py-0.5 text-xs font-bold tabular-nums text-foreground-muted">
+                  #{order.orderNumber}
+                </span>
+              )}
               {order.customerName}
+            </div>
+            <StatusBadge status={order.status} size="sm" className="shrink-0" />
+          </div>
+
+          {/* Fulfillment row */}
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-foreground-muted">
+            {order.fulfillmentType === FulfillmentType.PICKUP ? (
+              <StoreIcon className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <TruckIcon className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <span>{FULFILLMENT_LABELS[order.fulfillmentType]}</span>
+            {order.pickupTime && (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="text-foreground-muted/40"
+                ></span>
+                <ClockIcon className="h-3.5 w-3.5 shrink-0" />
+                <span className="font-medium text-foreground tabular-nums">
+                  {order.pickupTime}
+                </span>
+              </>
+            )}
+            {order.deliveryCep && !order.pickupTime && (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="text-foreground-muted/40"
+                ></span>
+                <span>
+                  CEP {order.deliveryCep.slice(0, 5)}-
+                  {order.deliveryCep.slice(5)}
+                </span>
+              </>
+            )}
+            {order.deliveryAddress && (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="text-foreground-muted/40"
+                ></span>
+                <span className="truncate">{order.deliveryAddress}</span>
+              </>
+            )}
+          </div>
+
+          {/* Products summary */}
+          <p className="truncate text-sm text-foreground-muted leading-relaxed">
+            {order.products.length === 0 ? (
+              <span className="italic">Sem itens</span>
+            ) : (
+              order.products.join("    ")
+            )}
+          </p>
+
+          {/* Total */}
+          <div className="flex items-center justify-between pt-0.5">
+            <p className="text-xs text-foreground-muted">Total do pedido</p>
+            <p className="font-semibold text-foreground tabular-nums">
+              {formatCurrency(order.totalAmount)}
             </p>
           </div>
-          <StatusBadge status={order.status} size="sm" className="shrink-0" />
-        </div>
-
-        {/* ── Fulfillment row ────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-foreground-muted">
-          {/* Icon */}
-          {order.fulfillmentType === FulfillmentType.PICKUP ? (
-            <StoreIcon className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <TruckIcon className="h-3.5 w-3.5 shrink-0" />
-          )}
-
-          {/* Type label */}
-          <span>{FULFILLMENT_LABELS[order.fulfillmentType]}</span>
-
-          {/* Pickup time */}
-          {order.pickupTime && (
-            <>
-              <span aria-hidden="true" className="text-foreground-muted/40">
-                ·
-              </span>
-              <ClockIcon className="h-3.5 w-3.5 shrink-0" />
-              <span className="font-medium text-foreground tabular-nums">
-                {order.pickupTime}
-              </span>
-            </>
-          )}
-
-          {/* Delivery address */}
-          {order.deliveryCep && !order.pickupTime && (
-            <>
-              <span aria-hidden="true" className="text-foreground-muted/40">
-                ·
-              </span>
-              <span className="truncate">
-                CEP {order.deliveryCep.slice(0, 5)}-{order.deliveryCep.slice(5)}
-              </span>
-            </>
-          )}
-          {order.deliveryAddress && (
-            <>
-              <span aria-hidden="true" className="text-foreground-muted/40">
-                ·
-              </span>
-              <span className="truncate">{order.deliveryAddress}</span>
-            </>
-          )}
-        </div>
-
-        {/* ── Products ───────────────────────────────────────────────────── */}
-        <p className="text-sm text-foreground-muted leading-relaxed">
-          {order.products.length === 0 ? (
-            <span className="italic">Sem itens</span>
-          ) : (
-            order.products.join("  ·  ")
-          )}
-        </p>
-
-        {/* ── Total + link ───────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between border-t border-line pt-2">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/dashboard/orders/${order.id}`}
-              className="text-xs font-medium text-accent hover:underline"
-            >
-              Ver detalhes →
-            </Link>
-            <a
-              href={whatsAppUrl(order.customerWhatsapp, order.customerName, order.orderNumber)}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Contatar ${order.customerName} via WhatsApp`}
-              title="Contatar via WhatsApp"
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[#25D366] hover:bg-[#25D366]/10 transition-colors"
-            >
-              <WhatsAppIcon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </a>
-          </div>
-          <span className="font-semibold text-foreground tabular-nums">
-            {formatCurrency(order.totalAmount)}
-          </span>
-        </div>
+        </Link>
       </div>
+
+      {/*  Quick-actions footer  */}
+      {/* z-10 sits above the stretched-link ::after overlay */}
+      {!isRejected && (
+        <div className="relative z-10 border-t border-line bg-surface-subtle/60 px-4 py-2.5">
+          <OrderCardQuickActions
+            orderId={order.id}
+            initialStatus={order.status}
+            customerWhatsapp={order.customerWhatsapp}
+            customerName={order.customerName}
+            orderNumber={order.orderNumber}
+          />
+        </div>
+      )}
     </article>
   );
 }
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
+//  Icons
 
 function StoreIcon({ className }: { className?: string }) {
   return (
@@ -207,20 +214,6 @@ function ClockIcon({ className }: { className?: string }) {
     >
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-
-function WhatsAppIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 32 32"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M16 2C8.268 2 2 8.268 2 16c0 2.522.667 4.89 1.834 6.938L2 30l7.281-1.906A13.94 13.94 0 0 0 16 30c7.732 0 14-6.268 14-14S23.732 2 16 2Zm0 25.5a11.44 11.44 0 0 1-5.844-1.594l-.418-.25-4.328 1.134 1.156-4.219-.274-.434A11.46 11.46 0 0 1 4.5 16C4.5 9.648 9.648 4.5 16 4.5S27.5 9.648 27.5 16 22.352 27.5 16 27.5Zm6.29-8.563c-.344-.172-2.031-1-2.344-1.115-.312-.109-.54-.172-.765.172-.225.344-.875 1.115-1.072 1.344-.197.225-.393.253-.737.082-.344-.172-1.453-.535-2.766-1.703-1.022-.91-1.712-2.035-1.912-2.379-.197-.344-.022-.531.15-.703.153-.153.344-.397.516-.594.172-.197.225-.344.337-.572.113-.225.056-.422-.028-.594-.084-.172-.765-1.844-1.047-2.525-.278-.66-.559-.572-.765-.581-.197-.009-.422-.013-.647-.013-.225 0-.59.084-.9.422-.31.337-1.175 1.147-1.175 2.797s1.203 3.244 1.372 3.469c.172.225 2.375 3.625 5.75 5.082.803.347 1.431.553 1.919.706.806.256 1.541.22 2.122.134.647-.097 2.031-.831 2.316-1.635.281-.803.281-1.491.197-1.635-.081-.144-.306-.228-.65-.4Z" />
     </svg>
   );
 }

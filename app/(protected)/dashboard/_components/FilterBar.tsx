@@ -1,11 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { OrderStatus } from "@/domain/order/Order";
 import { STATUS_CONFIG } from "./StatusBadge";
 import { parseFilters } from "../_lib/filters";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+//  Helpers
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -17,7 +18,7 @@ function tomorrowStr() {
   return d.toISOString().slice(0, 10);
 }
 
-// ─── Date presets ─────────────────────────────────────────────────────────────
+//  Date presets
 
 type DatePreset = "tudo" | "hoje" | "amanha" | "periodo";
 
@@ -37,7 +38,7 @@ const DATE_PRESETS: { key: DatePreset; label: string }[] = [
   { key: "periodo", label: "Período" },
 ];
 
-// ─── Status options ───────────────────────────────────────────────────────────
+//  Status options
 
 const STATUS_OPTIONS: { value: OrderStatus | null; label: string }[] = [
   { value: null, label: "Todos" },
@@ -47,17 +48,16 @@ const STATUS_OPTIONS: { value: OrderStatus | null; label: string }[] = [
   })),
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+//  Component
 
 /**
- * FilterBar — compact, mobile-friendly filter strip for the orders dashboard.
+ * FilterBar  SaaS-style filter bar with search, date presets, and status chips.
  *
- * URL params (all optional — omit to use default):
+ * URL params (all optional):
+ *   q       free-text search against customer name (debounced 350ms)
  *   from    YYYY-MM-DD  start of date range
  *   to      YYYY-MM-DD  end of date range
  *   status  PENDING | APPROVED | REJECTED
- *
- * Default state (no params): all orders from today onwards, all statuses.
  */
 export function FilterBar() {
   const router = useRouter();
@@ -68,9 +68,27 @@ export function FilterBar() {
   );
 
   const activePreset = detectPreset(from, to);
-  const isFiltered = !!(from || to || status);
+  const isFiltered = !!(from || to || status || searchParams.get("q"));
 
-  // ── URL updater ─────────────────────────────────────────────────────────────
+  //  Search with 350ms debounce
+
+  const [searchValue, setSearchValue] = useState(searchParams.get("q") ?? "");
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = new URLSearchParams(searchParams.toString());
+      if (searchValue.trim()) {
+        next.set("q", searchValue.trim());
+      } else {
+        next.delete("q");
+      }
+      router.push(`?${next.toString()}`, { scroll: false });
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValue]);
+
+  //  URL updater
 
   function push(updates: Record<string, string | null>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -78,11 +96,10 @@ export function FilterBar() {
       if (v === null) next.delete(k);
       else next.set(k, v);
     }
-    // Preserve scroll position — replace only query string.
     router.push(`?${next.toString()}`, { scroll: false });
   }
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  //  Handlers
 
   function handleDatePreset(preset: DatePreset) {
     const t = todayStr();
@@ -90,7 +107,6 @@ export function FilterBar() {
     if (preset === "tudo") push({ from: null, to: null });
     else if (preset === "hoje") push({ from: t, to: t });
     else if (preset === "amanha") push({ from: tm, to: tm });
-    // "periodo" → only clear to so user fills date inputs
     else push({ from: t, to: null });
   }
 
@@ -107,59 +123,99 @@ export function FilterBar() {
   }
 
   function handleReset() {
+    setSearchValue("");
     router.push("?", { scroll: false });
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  //  Render
 
   return (
-    <div className="space-y-3">
-      {/* ── Row 1: Date presets ────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-foreground-muted shrink-0">
-          Data
-        </span>
-        {DATE_PRESETS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => handleDatePreset(key)}
-            className={[
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              activePreset === key
-                ? "bg-foreground text-surface"
-                : "bg-surface-hover text-foreground-muted hover:text-foreground",
-            ].join(" ")}
-          >
-            {label}
-          </button>
-        ))}
-
-        {/* Reset pill */}
-        {isFiltered && (
-          <button
-            type="button"
-            onClick={handleReset}
-            className="ml-auto flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-foreground-muted hover:text-danger transition-colors"
-            aria-label="Limpar filtros"
-          >
-            <XIcon className="h-3.5 w-3.5" />
-            Limpar
-          </button>
-        )}
+    <div className="rounded-xl border border-line bg-surface p-4 space-y-3">
+      {/* Search row */}
+      <div className="relative">
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
+        <input
+          type="search"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          placeholder="Buscar por nome do cliente…"
+          className="w-full rounded-lg border border-line bg-surface-subtle py-2 pl-9 pr-4 text-sm text-foreground placeholder:text-foreground-muted/60 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+        />
       </div>
 
-      {/* ── Date inputs (Período only) ─────────────────────────────────────── */}
+      {/* Date + Status row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Date presets */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-semibold text-foreground-muted shrink-0">
+            Data
+          </span>
+          <div className="flex items-center gap-1 rounded-lg border border-line bg-surface-subtle p-0.5">
+            {DATE_PRESETS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleDatePreset(key)}
+                className={[
+                  "rounded-md px-3 py-1 text-xs font-medium transition-all",
+                  activePreset === key
+                    ? "bg-foreground text-surface shadow-sm"
+                    : "text-foreground-muted hover:text-foreground",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Status filter */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-foreground-muted shrink-0">
+            Status
+          </span>
+          <div className="flex items-center gap-1 rounded-lg border border-line bg-surface-subtle p-0.5">
+            {STATUS_OPTIONS.map(({ value, label }) => {
+              const isActive = status === value;
+              const activeCls =
+                value === null
+                  ? "bg-foreground text-surface shadow-sm"
+                  : value === OrderStatus.PENDING
+                    ? "bg-amber-400 text-amber-900 shadow-sm"
+                    : value === OrderStatus.APPROVED
+                      ? "bg-green-600 text-white shadow-sm"
+                      : "bg-surface text-foreground shadow-sm";
+              return (
+                <button
+                  key={value ?? "all"}
+                  type="button"
+                  onClick={() => handleStatus(value)}
+                  className={[
+                    "rounded-md px-3 py-1 text-xs font-medium transition-all whitespace-nowrap",
+                    isActive
+                      ? activeCls
+                      : "text-foreground-muted hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Date range inputs (periodo) */}
       {activePreset === "periodo" && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-foreground-muted shrink-0 w-8" />
+        <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-line">
+          <span className="text-xs text-foreground-muted">Período:</span>
           <label className="flex items-center gap-1.5 text-xs text-foreground-muted">
             De
             <input
               type="date"
               value={from ?? ""}
               onChange={(e) => handleFrom(e.target.value)}
-              className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+              className="rounded-lg border border-line bg-surface-subtle px-2.5 py-1.5 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
           </label>
           <label className="flex items-center gap-1.5 text-xs text-foreground-muted">
@@ -169,50 +225,49 @@ export function FilterBar() {
               value={to ?? ""}
               min={from ?? undefined}
               onChange={(e) => handleTo(e.target.value)}
-              className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+              className="rounded-lg border border-line bg-surface-subtle px-2.5 py-1.5 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
           </label>
         </div>
       )}
 
-      {/* ── Row 2: Status chips ────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-foreground-muted shrink-0">
-          Status
-        </span>
-        {STATUS_OPTIONS.map(({ value, label }) => {
-          const isActive = status === value;
-          // Use per-status colour when active (matches badge colours)
-          const activeClass =
-            value === null
-              ? "bg-foreground text-surface"
-              : value === OrderStatus.PENDING
-                ? "bg-amber-400 text-amber-900"
-                : value === OrderStatus.APPROVED
-                  ? "bg-green-600 text-white"
-                  : "bg-surface-hover text-foreground border border-line";
-          return (
-            <button
-              key={value ?? "all"}
-              type="button"
-              onClick={() => handleStatus(value)}
-              className={[
-                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                isActive
-                  ? activeClass
-                  : "bg-surface-hover text-foreground-muted hover:text-foreground",
-              ].join(" ")}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Clear row */}
+      {isFiltered && (
+        <div className="flex justify-end border-t border-line pt-2.5">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-1.5 text-xs font-medium text-foreground-muted transition-colors hover:text-danger"
+          >
+            <XIcon className="h-3.5 w-3.5" />
+            Limpar filtros
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Icon ─────────────────────────────────────────────────────────────────────
+//  Icons
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
 
 function XIcon({ className }: { className?: string }) {
   return (

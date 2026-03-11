@@ -4,8 +4,9 @@ import { listOrdersUseCase } from "@/infra/composition";
 import { FulfillmentType, OrderStatus } from "@/domain/order/Order";
 import type { OrderWithDetails, OrderFilters } from "@/domain/order/Order";
 import type { OrderViewModel } from "./_components/types";
-import { OrderList } from "./_components/OrderList";
 import { FilterBar } from "./_components/FilterBar";
+import { DashboardMetrics } from "./_components/DashboardMetrics";
+import { OrdersList } from "./_components/OrdersList";
 import { parseFilters } from "./_lib/filters";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -100,12 +101,20 @@ export default async function DashboardPage({
   const rawOrders = await listOrdersUseCase.execute(session.storeId, filters);
   const orders = rawOrders.map(toViewModel);
 
-  // ── Group ──────────────────────────────────────────────────────────────────
-  const todayOrders = orders.filter((o) => o.deliveryDate === todayStr);
-  const tomorrowOrders = orders.filter((o) => o.deliveryDate === tomorrowStr);
+  // ── Search filter (applied to list; metrics use unfiltered data) ──────────
+  const q = ((sp.q as string | undefined) ?? "").toLowerCase().trim();
+  const displayOrders = q
+    ? orders.filter((o) => o.customerName.toLowerCase().includes(q))
+    : orders;
+
+  // ── Group display orders ──────────────────────────────────────────────────
+  const todayOrders = displayOrders.filter((o) => o.deliveryDate === todayStr);
+  const tomorrowOrders = displayOrders.filter(
+    (o) => o.deliveryDate === tomorrowStr,
+  );
 
   const upcomingMap = new Map<string, OrderViewModel[]>();
-  for (const o of orders.filter((o) => o.deliveryDate > tomorrowStr)) {
+  for (const o of displayOrders.filter((o) => o.deliveryDate > tomorrowStr)) {
     const arr = upcomingMap.get(o.deliveryDate) ?? [];
     arr.push(o);
     upcomingMap.set(o.deliveryDate, arr);
@@ -118,100 +127,52 @@ export default async function DashboardPage({
       orders: dayOrders,
     }));
 
-  // ── KPI counts ─────────────────────────────────────────────────────────────
+  // ── Metrics (unfiltered: counts from ALL fetched orders) ──────────────────
+  const allTodayOrders = orders.filter((o) => o.deliveryDate === todayStr);
   const pendingCount = orders.filter(
     (o) => o.status === OrderStatus.PENDING,
   ).length;
+  const todayRevenue = allTodayOrders.reduce(
+    (sum, o) => sum + o.totalAmount,
+    0,
+  );
+
+  const isFiltered = !!(parsed.status || parsed.from || q);
 
   return (
     <div className="px-4 py-8 sm:px-8">
-      <div className="mx-auto max-w-2xl space-y-8">
+      <div className="mx-auto max-w-3xl space-y-8">
         {/* ── Page header ──────────────────────────────────────────────────── */}
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Encomendas
           </h1>
           <p className="text-sm text-foreground-muted">
-            {parsed.status || parsed.from
-              ? "Resultados filtrados — use os filtros acima para ajustar."
+            {isFiltered
+              ? "Resultados filtrados — use os filtros abaixo para ajustar."
               : "Seus pedidos a partir de hoje, por data e horário."}
           </p>
         </div>
+
+        {/* ── Metric cards ─────────────────────────────────────────────────── */}
+        <DashboardMetrics
+          todayCount={allTodayOrders.length}
+          pendingCount={pendingCount}
+          todayRevenue={todayRevenue}
+        />
 
         {/* ── Filter bar ───────────────────────────────────────────────────── */}
         <Suspense fallback={<FilterBarSkeleton />}>
           <FilterBar />
         </Suspense>
 
-        {/* ── KPI row ──────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard
-            value={todayOrders.length}
-            unit={todayOrders.length === 1 ? "pedido" : "pedidos"}
-            label="hoje"
-          />
-          <KpiCard
-            value={pendingCount}
-            unit={pendingCount === 1 ? "pedido" : "pedidos"}
-            label="pendentes"
-            accent={pendingCount > 0}
-          />
-        </div>
-
-        {/* ── Hoje ─────────────────────────────────────────────────────────── */}
-        <OrderList
-          title="Hoje"
-          orders={todayOrders}
-          highlighted
-          emptyMessage="Nenhum pedido para hoje."
+        {/* ── Order sections ───────────────────────────────────────────────── */}
+        <OrdersList
+          todayOrders={todayOrders}
+          tomorrowOrders={tomorrowOrders}
+          upcomingGroups={upcomingGroups}
+          isFiltered={isFiltered}
         />
-
-        {/* ── Amanhã ───────────────────────────────────────────────────────── */}
-        {tomorrowOrders.length > 0 && (
-          <OrderList title="Amanhã" orders={tomorrowOrders} />
-        )}
-
-        {/* ── Próximos Dias ─────────────────────────────────────────────────── */}
-        {upcomingGroups.length > 0 && (
-          <div className="space-y-5">
-            <div className="flex items-center gap-3">
-              <h2 className="text-base font-semibold text-foreground-muted">
-                Próximos Dias
-              </h2>
-              <span className="rounded-full bg-surface-hover px-2.5 py-0.5 text-xs font-medium text-foreground-muted">
-                {upcomingGroups.reduce((n, g) => n + g.orders.length, 0)}
-              </span>
-            </div>
-            <div className="space-y-6">
-              {upcomingGroups.map((group) => (
-                <OrderList
-                  key={group.date}
-                  title={group.dateLabel}
-                  orders={group.orders}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Empty state ───────────────────────────────────────────────────── */}
-        {orders.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-line bg-surface px-6 py-16 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-surface-hover">
-              <BoxIcon className="h-7 w-7 text-foreground-muted" />
-            </div>
-            <p className="text-base font-medium text-foreground">
-              {parsed.status || parsed.from
-                ? "Nenhum pedido com esses filtros"
-                : "Sem pedidos por enquanto"}
-            </p>
-            <p className="mt-1 text-sm text-foreground-muted">
-              {parsed.status || parsed.from
-                ? "Tente alterar ou limpar os filtros para ver mais resultados."
-                : "Os pedidos feitos pelos seus clientes aparecerão aqui."}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -221,91 +182,12 @@ export default async function DashboardPage({
 
 function FilterBarSkeleton() {
   return (
-    <div className="space-y-3 animate-pulse">
-      <div className="flex gap-1.5">
-        {[48, 40, 56, 64].map((w) => (
-          <div
-            key={w}
-            style={{ width: w }}
-            className="h-6 rounded-full bg-surface-hover"
-          />
-        ))}
-      </div>
-      <div className="flex gap-1.5">
-        {[40, 68, 68, 68].map((w, i) => (
-          <div
-            key={i}
-            style={{ width: w }}
-            className="h-6 rounded-full bg-surface-hover"
-          />
-        ))}
+    <div className="rounded-xl border border-line bg-surface p-4 space-y-3 animate-pulse">
+      <div className="h-9 rounded-lg bg-surface-hover" />
+      <div className="flex gap-2">
+        <div className="h-7 w-32 rounded-lg bg-surface-hover" />
+        <div className="h-7 w-40 rounded-lg bg-surface-hover" />
       </div>
     </div>
-  );
-}
-
-// ─── KpiCard ──────────────────────────────────────────────────────────────────
-
-function KpiCard({
-  value,
-  label,
-  unit,
-  accent = false,
-}: {
-  value: number;
-  label: string;
-  unit: string;
-  accent?: boolean;
-}) {
-  const isWarning = accent && value > 0;
-  return (
-    <div
-      className={[
-        "relative overflow-hidden rounded-xl border p-4 shadow-sm transition-shadow duration-150 hover:shadow-md",
-        isWarning
-          ? "border-amber-200/80 bg-amber-50"
-          : "border-line bg-surface",
-      ].join(" ")}
-    >
-      {isWarning && (
-        <span
-          aria-hidden="true"
-          className="absolute inset-x-0 top-0 h-0.5 bg-amber-400"
-        />
-      )}
-      <p
-        className={[
-          "text-3xl font-bold tabular-nums leading-none tracking-tight",
-          isWarning ? "text-amber-700" : "text-foreground",
-        ].join(" ")}
-      >
-        {value}
-      </p>
-      <p className="mt-1.5 section-label">
-        {unit} {label}
-      </p>
-    </div>
-  );
-}
-
-// ─── Icon ─────────────────────────────────────────────────────────────────────
-
-function BoxIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
-    </svg>
   );
 }
