@@ -22,6 +22,7 @@ import { parseOrdersFilters } from "../_lib/filters";
 import { OrdersSummaryCards } from "./_components/OrdersSummaryCards";
 import { OrdersFilters } from "./_components/OrdersFilters";
 import { OrdersTableClient } from "./_components/OrdersTableClient";
+import { PageHeader } from "../_components/PageHeader";
 
 export const metadata: Metadata = { title: "Encomendas" };
 

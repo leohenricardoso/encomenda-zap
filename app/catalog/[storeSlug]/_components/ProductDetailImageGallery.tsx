@@ -1,27 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { CatalogImage } from "@/domain/catalog/types";
 import { ImagePlaceholder } from "./ImageGallery";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface ProductDetailImageGalleryProps {
   images: CatalogImage[];
   productName: string;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const DETAIL_SIZES = "(max-width: 1023px) 100vw, 50vw";
+
+// ─── Component ──────────────────────────────────────────────────────────────────
 
 /**
- * ProductDetailImageGallery — full-size image display for the product detail page.
+ * ProductDetailImageGallery — full-size image gallery for the product detail page.
  *
- * Behaviours:
- *   - No images  → ImagePlaceholder
- *   - 1 image    → single large image, no thumbnails
- *   - 2–3 images → large main image + clickable thumbnail strip below
- *
- * Designed to fill its grid column; parent controls the outer width.
+ * Uses next/image for responsive, optimised delivery.
+ * - No images → ImagePlaceholder
+ * - 1 image   → single prominent image
+ * - 2–3 images → large main image + clickable thumbnail strip below
  */
 export function ProductDetailImageGallery({
   images,
@@ -29,7 +30,7 @@ export function ProductDetailImageGallery({
 }: ProductDetailImageGalleryProps) {
   const [activeIdx, setActiveIdx] = useState(0);
 
-  // ── No images ──────────────────────────────────────────────────────────────
+  // ── No images ─────────────────────────────────────────────────────────
   if (images.length === 0) {
     return (
       <div className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]">
@@ -42,21 +43,20 @@ export function ProductDetailImageGallery({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* ── Main image ──────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          key={active.imageUrl}
+      {/* ── Main image ────────────────────────────────────────────────── */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]">
+        <Image
+          key={active.id}
           src={active.imageUrl}
           alt={productName}
-          loading="eager"
-          width={800}
-          height={600}
-          className="aspect-[4/3] w-full object-cover transition-opacity duration-200"
+          fill
+          sizes={DETAIL_SIZES}
+          className="object-cover transition-opacity duration-200"
+          priority
         />
       </div>
 
-      {/* ── Thumbnail strip (only when 2+ images) ───────────────────────────── */}
+      {/* ── Thumbnail strip (only when 2+ images) ─────────────────────── */}
       {images.length > 1 && (
         <div
           role="list"
@@ -74,20 +74,19 @@ export function ProductDetailImageGallery({
                 aria-current={isActive}
                 onClick={() => setActiveIdx(idx)}
                 className={[
-                  "h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer",
                   isActive
                     ? "border-foreground ring-1 ring-foreground"
-                    : "border-transparent opacity-60 hover:opacity-90",
+                    : "border-transparent opacity-55 hover:opacity-90",
                 ].join(" ")}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={img.imageUrl}
                   alt={`Miniatura ${idx + 1}`}
-                  loading="lazy"
-                  width={64}
-                  height={64}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="64px"
+                  className="object-cover"
                 />
               </button>
             );

@@ -22,6 +22,7 @@ import { CustomersSummaryCards } from "./_components/CustomersSummaryCards";
 import { CustomersFilters } from "./_components/CustomersFilters";
 import { CustomersTableClient } from "./_components/CustomersTableClient";
 import type { CustomerViewModel } from "./_components/CustomersTable";
+import { PageHeader } from "../_components/PageHeader";
 
 export const metadata: Metadata = { title: "Clientes" };
 

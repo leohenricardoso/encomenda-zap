@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { CatalogImage } from "@/domain/catalog/types";
 
-// ─── Placeholder ─────────────────────────────────────────────────────────────
+// ─── Placeholder ─────────────────────────────────────────────────────
 
 /**
- * Shown when a product has no images at all.
+ * Shown when a product has no images.
  * Maintains consistent card dimensions so the grid never collapses.
  */
 export function ImagePlaceholder() {
@@ -34,89 +35,83 @@ export function ImagePlaceholder() {
   );
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface ImageGalleryProps {
   images: CatalogImage[];
   productName: string;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// Responsive sizes hint for the 1/2/3/4-col grid on the catalog page.
+const CARD_SIZES =
+  "(max-width: 639px) 100vw, (max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw";
+
+// ─── Component ──────────────────────────────────────────────────────────────────
 
 /**
- * ImageGallery — displays product images in the public catalog card.
+ * ImageGallery — displays product images on a catalog card.
+ *
+ * Uses next/image for automatic WebP/AVIF conversion, responsive srcsets,
+ * and lazy loading. No external configuration needed beyond remotePatterns.
  *
  * Behaviours:
- *   - No images → ImagePlaceholder (consistent card dimensions).
- *   - 1 image   → plain <img> (no unnecessary UI chrome).
- *   - 2–3 imgs  → Desktop: main image + clickable thumbnail strip.
- *                 Mobile : horizontal snap-scroll carousel (zero JS, pure CSS).
- *
- * Performance:
- *   - First image loads eagerly; all extras load lazily.
- *   - No external libraries — CSS scroll snap handles mobile swipe natively.
+ *   - No images → ImagePlaceholder (consistent card height)
+ *   - 1 image   → single optimised image, subtle zoom on card hover
+ *   - 2–3 imgs  → Mobile: CSS snap-scroll carousel · Desktop: main + thumbs
  */
 export function ImageGallery({ images, productName }: ImageGalleryProps) {
   const [activeIdx, setActiveIdx] = useState(0);
 
-  // ── No images ──────────────────────────────────────────────────────────────
+  // ── No images ─────────────────────────────────────────────────────────
   if (images.length === 0) {
     return <ImagePlaceholder />;
   }
 
-  // ── Single image ───────────────────────────────────────────────────────────
+  // ── Single image ────────────────────────────────────────────────────
   if (images.length === 1) {
     return (
-      <div className="aspect-[4/3] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+      <div className="relative aspect-[4/3] w-full overflow-hidden">
+        <Image
           src={images[0].imageUrl}
           alt={productName}
-          loading="lazy"
-          width={400}
-          height={300}
-          className="h-full w-full object-cover"
+          fill
+          sizes={CARD_SIZES}
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          priority={false}
         />
       </div>
     );
   }
 
-  // ── Multiple images ────────────────────────────────────────────────────────
+  // ── Multiple images ──────────────────────────────────────────────────
   return (
     <>
       {/* ════════════════════════════════════════════════════════════════
-          MOBILE — horizontal snap-scroll carousel
-          Entirely CSS-driven: no touch handlers needed.
-          Swipe left/right navigates between images.
-      ══════════════════════════════════════════════════════════════════ */}
-      <div
-        className="relative md:hidden"
-        aria-label={`Imagens de ${productName}`}
-      >
-        {/* Scrollable strip */}
+          MOBILE — horizontal snap-scroll carousel (pure CSS, zero JS)
+      ════════════════════════════════════════════════════════════════ */}
+      <div className="relative md:hidden">
         <div
           className="flex overflow-x-auto snap-x snap-mandatory"
-          style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+          style={{ scrollbarWidth: "none" }}
         >
           {images.map((img, i) => (
             <div
               key={img.id}
-              className="aspect-[4/3] w-full shrink-0 snap-start snap-always overflow-hidden"
+              className="relative aspect-[4/3] w-full shrink-0 snap-start snap-always overflow-hidden"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={img.imageUrl}
                 alt={`${productName} — imagem ${i + 1}`}
-                loading={i === 0 ? "eager" : "lazy"}
-                width={400}
-                height={300}
-                className="h-full w-full object-cover"
+                fill
+                sizes="100vw"
+                className="object-cover"
+                priority={i === 0}
               />
             </div>
           ))}
         </div>
 
-        {/* Dot indicators — purely decorative, positioned over image */}
+        {/* Dot indicators */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute bottom-2 left-0 right-0 flex justify-center gap-1.5"
@@ -124,32 +119,30 @@ export function ImageGallery({ images, productName }: ImageGalleryProps) {
           {images.map((_, i) => (
             <span
               key={i}
-              className="block h-1.5 w-1.5 rounded-full bg-white shadow drop-shadow"
+              className="block h-1.5 w-1.5 rounded-full bg-white shadow"
             />
           ))}
         </div>
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
-          DESKTOP — main image + thumbnail strip
-          Active thumbnail changes the displayed main image.
-      ══════════════════════════════════════════════════════════════════ */}
+          DESKTOP — main image + clickable thumbnail strip
+      ════════════════════════════════════════════════════════════════ */}
       <div className="hidden md:flex md:flex-col">
         {/* Main image */}
-        <div className="aspect-[4/3] overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+          <Image
             src={images[activeIdx].imageUrl}
             alt={`${productName} — imagem ${activeIdx + 1}`}
-            loading="lazy"
-            width={400}
-            height={300}
-            className="h-full w-full object-cover transition-opacity duration-150"
+            fill
+            sizes={CARD_SIZES}
+            className="object-cover transition-opacity duration-150 group-hover:scale-105 transition-transform duration-300"
+            priority={activeIdx === 0}
           />
         </div>
 
         {/* Thumbnail strip */}
-        <div className="flex gap-1.5 px-2 py-2 bg-[rgb(var(--color-bg-muted))]">
+        <div className="flex gap-1.5 bg-[rgb(var(--color-bg-muted))] px-2 py-2">
           {images.map((img, i) => (
             <button
               key={img.id}
@@ -159,22 +152,20 @@ export function ImageGallery({ images, productName }: ImageGalleryProps) {
               onClick={() => setActiveIdx(i)}
               className={[
                 "relative h-12 w-12 shrink-0 overflow-hidden rounded transition-all",
-                "border-2 focus:outline-none focus:ring-2",
-                "focus:ring-[rgb(var(--color-primary))] focus:ring-offset-1",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+                "focus-visible:ring-[rgb(var(--color-primary))]",
                 i === activeIdx
-                  ? "border-[rgb(var(--color-primary))] opacity-100"
-                  : "border-transparent opacity-60 hover:opacity-90 hover:border-[rgb(var(--color-border))]",
+                  ? "ring-2 ring-[rgb(var(--color-primary))] opacity-100"
+                  : "opacity-55 hover:opacity-90",
               ].join(" ")}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={img.imageUrl}
                 alt=""
                 aria-hidden="true"
-                loading="lazy"
-                width={48}
-                height={48}
-                className="h-full w-full object-cover"
+                fill
+                sizes="48px"
+                className="object-cover"
               />
             </button>
           ))}

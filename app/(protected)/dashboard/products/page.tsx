@@ -21,6 +21,7 @@ import type { Product } from "@/domain/product/types";
 import { ProductCard } from "./_components/ProductCard";
 import { ProductFilters } from "./_components/ProductFilters";
 import { EmptyState } from "./_components/EmptyState";
+import { PageHeader } from "../_components/PageHeader";
 
 export const metadata: Metadata = { title: "Produtos" };
 
@@ -108,91 +109,79 @@ export default async function ProductsPage({ searchParams }: Props) {
   );
 
   return (
-    /*
-     * Page container — comfortable horizontal padding scales with viewport.
-     * max-w-screen-xl keeps wide monitors readable.
-     */
-    <div className="mx-auto w-full max-w-screen-xl px-4 py-8 md:px-6 lg:px-8">
-      {/* ── Page header ────────────────────────────────────────────────── */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">
-            Produtos
-          </h1>
-          <p className="mt-0.5 text-sm text-[rgb(var(--color-text-muted))]">
-            Gerencie os produtos do seu catálogo
-          </p>
+    <div>
+      <PageHeader
+        eyebrow="Catálogo"
+        title="Produtos"
+        description="Gerencie os produtos e variações do seu catálogo"
+        actions={
+          <Link
+            href="/dashboard/products/new"
+            className={[
+              "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
+              "bg-foreground text-surface",
+              "transition-colors duration-150 hover:bg-foreground/90",
+              "ring-focus",
+            ].join(" ")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+            </svg>
+            Novo produto
+          </Link>
+        }
+      />
+
+      <div className="mx-auto w-full max-w-screen-xl px-4 pt-6 pb-8 md:px-6 lg:px-8">
+        {/* ── Filters bar ───────────────────────────────────────────────────── */}
+        <div className="mb-6">
+          <Suspense fallback={<FiltersSkeleton />}>
+            <ProductFilters />
+          </Suspense>
         </div>
 
-        {/* CTA — full-width on mobile, auto on sm+ */}
-        <Link
-          href="/dashboard/products/new"
-          className={[
-            "inline-flex items-center justify-center gap-2 rounded-lg",
-            "px-4 py-2.5 text-sm font-medium",
-            "bg-[rgb(var(--color-primary))] text-[rgb(var(--color-primary-foreground))]",
-            "transition-opacity hover:opacity-90",
-            "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary))] focus:ring-offset-2",
-            "sm:w-auto w-full",
-          ].join(" ")}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="h-4 w-4"
-            aria-hidden="true"
-          >
-            <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-          </svg>
-          Novo produto
-        </Link>
-      </div>
-
-      {/* ── Filters bar ────────────────────────────────────────────────── */}
-      {/*
-       * Suspense is required because ProductFilters calls useSearchParams()
-       * on the client. Without it, Next.js 15 throws during static rendering.
-       */}
-      <div className="mb-6">
-        <Suspense fallback={<FiltersSkeleton />}>
-          <ProductFilters />
-        </Suspense>
-      </div>
-
-      {/* ── Count label ─────────────────────────────────────────────────── */}
-      {allProducts.length > 0 && (
-        <p className="mb-4 text-xs text-[rgb(var(--color-text-muted))]">
-          {products.length === allProducts.length ? (
-            <>
-              {allProducts.length}{" "}
-              {allProducts.length === 1 ? "produto" : "produtos"}
-            </>
-          ) : (
-            <>
-              {products.length} de {allProducts.length} produtos
-            </>
-          )}
-        </p>
-      )}
-
-      {/* ── Products grid ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {products.length === 0 ? (
-          <EmptyState mode={hasActiveFilters ? "no-results" : "no-products"} />
-        ) : (
-          products.map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              name={product.name}
-              price={product.price}
-              variantCount={product.variants.length}
-              isActive={product.isActive}
-              imageUrl={product.images[0]?.imageUrl ?? null}
-            />
-          ))
+        {/* ── Count label ───────────────────────────────────────────────────── */}
+        {allProducts.length > 0 && (
+          <p className="mb-4 section-label">
+            {products.length === allProducts.length ? (
+              <>
+                {allProducts.length}{" "}
+                {allProducts.length === 1 ? "produto" : "produtos"}
+              </>
+            ) : (
+              <>
+                {products.length} de {allProducts.length} produtos
+              </>
+            )}
+          </p>
         )}
+
+        {/* ── Products grid ─────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {products.length === 0 ? (
+            <EmptyState
+              mode={hasActiveFilters ? "no-results" : "no-products"}
+            />
+          ) : (
+            products.map((product) => (
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                price={product.price}
+                variantCount={product.variants.length}
+                isActive={product.isActive}
+                imageUrl={product.images[0]?.imageUrl ?? null}
+              />
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
@@ -203,9 +192,9 @@ export default async function ProductsPage({ searchParams }: Props) {
 function FiltersSkeleton() {
   return (
     <div className="flex animate-pulse gap-3">
-      <div className="h-9 flex-1 rounded-lg bg-[rgb(var(--color-bg-muted))]" />
-      <div className="h-9 w-48 rounded-lg bg-[rgb(var(--color-bg-muted))]" />
-      <div className="h-9 w-36 rounded-lg bg-[rgb(var(--color-bg-muted))]" />
+      <div className="h-9 flex-1 rounded-lg bg-surface-hover" />
+      <div className="h-9 w-48 rounded-lg bg-surface-hover" />
+      <div className="h-9 w-36 rounded-lg bg-surface-hover" />
     </div>
   );
 }

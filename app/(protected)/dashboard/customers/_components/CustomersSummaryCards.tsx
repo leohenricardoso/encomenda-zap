@@ -34,33 +34,39 @@ function SummaryCard({
   return (
     <div
       className={[
-        "flex items-start gap-3 rounded-xl border p-4",
-        "bg-surface shadow-sm",
-        accent ? "border-accent/30" : "border-line",
+        "relative flex flex-col gap-3 overflow-hidden rounded-xl border bg-surface p-5",
+        "shadow-sm transition-shadow duration-150 hover:shadow-md",
+        accent ? "border-accent/25" : "border-line",
       ].join(" ")}
     >
-      <div
-        className={[
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-          accent
-            ? "bg-accent/10 text-accent"
-            : "bg-surface-hover text-foreground-muted",
-        ].join(" ")}
-        aria-hidden="true"
-      >
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-foreground-muted">{label}</p>
-        <p
+      {accent && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-0.5 bg-accent"
+        />
+      )}
+      <div className="flex items-center justify-between">
+        <p className="section-label">{label}</p>
+        <div
           className={[
-            "mt-0.5 truncate text-xl font-semibold tabular-nums",
-            accent ? "text-accent" : "text-foreground",
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+            accent
+              ? "bg-accent/10 text-accent"
+              : "bg-surface-hover text-foreground-muted",
           ].join(" ")}
+          aria-hidden="true"
         >
-          {value}
-        </p>
+          {icon}
+        </div>
       </div>
+      <p
+        className={[
+          "truncate text-2xl font-semibold tabular-nums tracking-tight",
+          accent ? "text-accent" : "text-foreground",
+        ].join(" ")}
+      >
+        {value}
+      </p>
     </div>
   );
 }

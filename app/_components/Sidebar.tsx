@@ -28,7 +28,9 @@ interface SidebarProps {
 
 // ─── Nav items config ─────────────────────────────────────────────────────────
 
-const NAV_ITEMS: { label: string; href: string; icon: React.ReactNode }[] = [
+type NavEntry = { label: string; href: string; icon: React.ReactNode };
+
+const NAV_ITEMS: NavEntry[] = [
   {
     label: "Dashboard",
     href: "/dashboard",
@@ -156,18 +158,22 @@ const NAV_ITEMS: { label: string; href: string; icon: React.ReactNode }[] = [
   },
 ];
 
+// Separate settings from the main nav group
+const SETTINGS_ITEM: NavEntry = NAV_ITEMS[NAV_ITEMS.length - 1]!;
+const MAIN_NAV_ITEMS: NavEntry[] = NAV_ITEMS.slice(0, -1);
+
 // ─── Brand mark ───────────────────────────────────────────────────────────────
 
 function BrandMark() {
   return (
     <div className="flex items-center gap-2.5">
-      {/* Bolt icon */}
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground">
+      {/* Bolt icon with accent color */}
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="currentColor"
-          className="h-4 w-4 text-surface"
+          className="h-4 w-4 text-white"
           aria-hidden="true"
         >
           <path
@@ -177,9 +183,14 @@ function BrandMark() {
           />
         </svg>
       </span>
-      <span className="text-sm font-semibold text-foreground">
-        Encomenda Zap
-      </span>
+      <div className="flex flex-col leading-none">
+        <span className="text-sm font-semibold text-foreground">
+          Encomenda Zap
+        </span>
+        <span className="mt-0.5 text-[10px] font-medium tracking-[0.08em] text-foreground-muted uppercase">
+          Dashboard
+        </span>
+      </div>
     </div>
   );
 }
@@ -237,7 +248,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         ].join(" ")}
       >
         {/* Brand */}
-        <div className="flex h-16 shrink-0 items-center border-b border-line px-5">
+        <div className="flex h-14 shrink-0 items-center border-b border-line px-5">
           <BrandMark />
         </div>
 
@@ -246,8 +257,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           className="flex-1 overflow-y-auto px-3 py-4"
           aria-label="Navegação principal"
         >
+          {/* Main nav group */}
           <ul role="list" className="space-y-0.5">
-            {NAV_ITEMS.map((item) => (
+            {MAIN_NAV_ITEMS.map((item) => (
               <li key={item.href}>
                 <NavItem
                   {...item}
@@ -257,11 +269,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </li>
             ))}
           </ul>
+
+          {/* Divider */}
+          <div className="my-4 border-t border-line" />
+
+          {/* Settings — separated at bottom of nav */}
+          <ul role="list">
+            <li>
+              <NavItem
+                {...SETTINGS_ITEM}
+                isActive={isItemActive(SETTINGS_ITEM.href)}
+                onClick={onClose}
+              />
+            </li>
+          </ul>
         </nav>
 
-        {/* Footer slot — future: avatar, plan badge, etc. */}
-        <div className="shrink-0 border-t border-line p-4">
-          <p className="text-xs text-foreground-muted">
+        {/* Footer */}
+        <div className="shrink-0 border-t border-line px-4 py-3">
+          <p className="text-[11px] font-medium tracking-wide text-foreground-muted/70 uppercase">
             © {new Date().getFullYear()} Encomenda Zap
           </p>
         </div>

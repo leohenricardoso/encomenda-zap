@@ -43,22 +43,30 @@ export function NavItem({
       onClick={onClick}
       aria-current={isActive ? "page" : undefined}
       className={[
-        // Base — shared across all states
-        "group flex items-center gap-3 rounded-lg px-3 py-2",
-        "text-sm font-medium transition-colors duration-100",
+        // Base layout
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2",
+        "text-sm font-medium transition-all duration-150",
         "ring-focus",
         // State-driven colours
         isActive
-          ? "bg-surface-hover text-foreground"
+          ? "bg-accent/8 text-foreground"
           : "text-foreground-muted hover:bg-surface-hover hover:text-foreground",
       ].join(" ")}
     >
-      {/* Icon wrapper — shrink prevents icon squishing on long labels */}
+      {/* Active indicator — left accent bar */}
+      {isActive && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-accent"
+        />
+      )}
+
+      {/* Icon wrapper */}
       <span
         className={[
-          "h-5 w-5 shrink-0 transition-colors duration-100",
+          "h-5 w-5 shrink-0 transition-colors duration-150",
           isActive
-            ? "text-foreground"
+            ? "text-accent"
             : "text-foreground-muted group-hover:text-foreground",
         ].join(" ")}
         aria-hidden="true"

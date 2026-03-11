@@ -257,24 +257,31 @@ function KpiCard({
   unit: string;
   accent?: boolean;
 }) {
+  const isWarning = accent && value > 0;
   return (
     <div
       className={[
-        "rounded-xl border p-4",
-        accent && value > 0
-          ? "border-amber-200 bg-amber-50"
+        "relative overflow-hidden rounded-xl border p-4 shadow-sm transition-shadow duration-150 hover:shadow-md",
+        isWarning
+          ? "border-amber-200/80 bg-amber-50"
           : "border-line bg-surface",
       ].join(" ")}
     >
+      {isWarning && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-0.5 bg-amber-400"
+        />
+      )}
       <p
         className={[
-          "text-3xl font-bold tabular-nums leading-none",
-          accent && value > 0 ? "text-amber-700" : "text-foreground",
+          "text-3xl font-bold tabular-nums leading-none tracking-tight",
+          isWarning ? "text-amber-700" : "text-foreground",
         ].join(" ")}
       >
         {value}
       </p>
-      <p className="mt-1.5 text-xs text-foreground-muted">
+      <p className="mt-1.5 section-label">
         {unit} {label}
       </p>
     </div>

@@ -54,7 +54,7 @@ export function Header({
   actions,
 }: HeaderProps) {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-line bg-surface px-4 md:px-6">
+    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-surface px-4 md:px-6">
       {/* ── Hamburger — only rendered (and visible) on mobile ──────────────── */}
       <button
         type="button"
@@ -71,15 +71,13 @@ export function Header({
         <MenuIcon />
       </button>
 
-      {/* ── Store name ─────────────────────────────────────────────────────── */}
-      <p className="text-sm font-semibold text-foreground truncate">
+      {/* ── Store name — shown on mobile only (sidebar hidden) ──────────── */}
+      <p className="lg:hidden text-sm font-semibold text-foreground truncate">
         {storeName}
       </p>
 
       {/* ── Right slot ─────────────────────────────────────────────────────── */}
-      {actions && (
-        <div className="ml-auto flex items-center gap-2">{actions}</div>
-      )}
+      <div className="ml-auto flex items-center gap-2">{actions}</div>
     </header>
   );
 }

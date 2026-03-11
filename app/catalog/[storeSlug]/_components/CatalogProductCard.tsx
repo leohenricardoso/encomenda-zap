@@ -56,7 +56,7 @@ export function CatalogProductCard({
         "group flex flex-col overflow-hidden rounded-xl",
         "border border-[rgb(var(--color-border))]",
         "bg-[rgb(var(--color-bg))]",
-        "transition-shadow duration-150 hover:shadow-md",
+        "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-[rgb(var(--color-line-strong))]",
       ].join(" ")}
     >
       {/* ── Image gallery / placeholder ───────────────────────────────── */}

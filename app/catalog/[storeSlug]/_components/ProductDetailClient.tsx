@@ -33,9 +33,8 @@ export function ProductDetailClient({
       {/* ── Back link ────────────────────────────────────────────────────── */}
       <Link
         href={`/catalog/${storeSlug}`}
-        className="inline-flex items-center gap-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] transition-colors duration-150"
+        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-bg-muted))] transition-all duration-150 -ml-3"
       >
-        {/* Left arrow */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
@@ -53,7 +52,7 @@ export function ProductDetailClient({
       </Link>
 
       {/* ── Product layout ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-10">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-12">
         {/* ── Left: image gallery ───────────────────────────────────────── */}
         <ProductDetailImageGallery
           images={product.images}
@@ -61,14 +60,14 @@ export function ProductDetailClient({
         />
 
         {/* ── Right: info + order section ───────────────────────────────── */}
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           {/* Product identity */}
-          <div>
-            <h1 className="text-2xl font-bold leading-tight text-[rgb(var(--color-text))] sm:text-3xl">
+          <div className="space-y-3">
+            <h1 className="text-2xl font-bold leading-tight tracking-tight text-[rgb(var(--color-text))] sm:text-3xl">
               {product.name}
             </h1>
             {product.description && (
-              <p className="mt-3 text-sm leading-relaxed text-[rgb(var(--color-text-muted))]">
+              <p className="text-base leading-relaxed text-[rgb(var(--color-text-muted))]">
                 {product.description}
               </p>
             )}
@@ -77,7 +76,7 @@ export function ProductDetailClient({
           {/* Divider */}
           <hr className="border-[rgb(var(--color-border))]" />
 
-          {/* Pricing / variants / qty / CTA — reuses the same component as the card */}
+          {/* Pricing / variants / qty / CTA */}
           <OrderProductSection product={product} storeSlug={storeSlug} />
         </div>
       </div>

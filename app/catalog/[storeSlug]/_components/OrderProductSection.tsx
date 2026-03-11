@@ -175,7 +175,7 @@ export function OrderProductSection({
                 aria-pressed={isSelected}
                 onClick={() => toggleVariant(variant)}
                 className={[
-                  "rounded-full border px-3 py-1 text-xs font-medium ring-focus",
+                  "min-h-[44px] rounded-full border px-3 py-1 text-xs font-medium ring-focus cursor-pointer",
                   "transition-colors duration-100",
                   isSelected
                     ? "bg-gray-200 border-2 border-black"
@@ -201,12 +201,12 @@ export function OrderProductSection({
             onClick={decrementQty}
             disabled={quantity <= product.minQuantity}
             className={[
-              "flex h-6 w-6 items-center justify-center rounded border text-xs font-bold",
+              "flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-bold",
               "border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]",
               "transition-colors duration-100",
               quantity <= product.minQuantity
                 ? "cursor-not-allowed opacity-40"
-                : "hover:bg-[rgb(var(--color-bg-muted))]",
+                : "hover:bg-[rgb(var(--color-bg-muted))] cursor-pointer",
             ].join(" ")}
           >
             −
@@ -214,7 +214,7 @@ export function OrderProductSection({
 
           <span
             aria-live="polite"
-            className="min-w-[2rem] text-center text-sm font-semibold text-[rgb(var(--color-text))]"
+            className="min-w-[2.5rem] text-center text-sm font-semibold text-[rgb(var(--color-text))]"
           >
             {quantity}
           </span>
@@ -224,9 +224,9 @@ export function OrderProductSection({
             aria-label="Aumentar quantidade"
             onClick={incrementQty}
             className={[
-              "flex h-6 w-6 items-center justify-center rounded border text-xs font-bold",
+              "flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-bold",
               "border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]",
-              "transition-colors duration-100 hover:bg-[rgb(var(--color-bg-muted))]",
+              "transition-colors duration-100 hover:bg-[rgb(var(--color-bg-muted))] cursor-pointer",
             ].join(" ")}
           >
             +
@@ -254,7 +254,7 @@ export function OrderProductSection({
           type="button"
           onClick={handleAddOrUpdate}
           className={[
-            "w-full rounded-lg px-4 py-2 text-xs font-semibold ring-focus",
+            "w-full min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold ring-focus cursor-pointer",
             "transition-all duration-200 active:scale-[.98]",
             justAdded
               ? "bg-green-600 text-white"
@@ -274,7 +274,7 @@ export function OrderProductSection({
           <button
             type="button"
             onClick={handleRemove}
-            className="w-full rounded-lg px-4 py-2 text-xs font-medium ring-focus text-danger hover:bg-danger/5 transition-colors duration-150"
+            className="w-full min-h-[44px] rounded-xl px-4 py-2 text-xs font-medium ring-focus text-danger hover:bg-danger/5 transition-colors duration-150 cursor-pointer"
           >
             Remover do pedido
           </button>
