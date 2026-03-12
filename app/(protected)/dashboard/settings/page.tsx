@@ -1,11 +1,12 @@
 /**
  * /dashboard/settings — Store settings page (Server Component).
  *
- * Loads all configured CEP ranges from the DB so the form can be pre-filled,
- * then hands off to a Client Component for all interactivity.
+ * Fetches all store configuration in parallel and renders the settings
+ * grouped into logical sections. Each section is handled by a dedicated
+ * composition component that delegates interactivity to its client-side
+ * form children.
  */
 
-import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
 import {
   getCepRangeUseCase,
@@ -13,15 +14,13 @@ import {
   getStorePickupAddressUseCase,
   storeRepo,
 } from "@/infra/composition";
-import { CepRangeForm } from "./_components/CepRangeForm";
-import { WhatsappForm } from "./_components/WhatsappForm";
-import { PickupAddressForm } from "./_components/PickupAddressForm";
-import { DefaultDeliveryFeeForm } from "./_components/DefaultDeliveryFeeForm";
+import { DeliverySettings } from "./_components/DeliverySettings";
+import { StoreInfoSettings } from "./_components/StoreInfoSettings";
+import { ContactSettings } from "./_components/ContactSettings";
 
 export default async function SettingsPage() {
   const session = await getSession();
 
-  // Load existing CEP ranges (empty array = unrestricted delivery)
   const [ranges, currentWhatsapp, pickupAddress, defaultDeliveryFee] =
     await Promise.all([
       getCepRangeUseCase.execute(session.storeId),
@@ -32,53 +31,34 @@ export default async function SettingsPage() {
 
   return (
     <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
-      <div className="mx-auto max-w-xl space-y-8">
+      <div className="mx-auto max-w-3xl space-y-3">
         {/* ── Page header ─────────────────────────────────────────────────── */}
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <div className="space-y-1 pb-2 border-b border-line mb-4">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
             Configurações
           </h1>
           <p className="text-sm text-foreground-muted">
-            Ajuste as configurações da sua loja.
+            Gerencie as configurações da sua loja e preferências de entrega.
           </p>
         </div>
 
-        {/* ── CEP range form ──────────────────────────────────────────────── */}
-        <CepRangeForm
-          initialRanges={ranges.map((r) => ({
+        {/* ── Entrega ──────────────────────────────────────────────────────── */}
+        <DeliverySettings
+          pickupAddress={pickupAddress}
+          ranges={ranges.map((r) => ({
             id: r.id,
             cepStart: r.cepStart,
             cepEnd: r.cepEnd,
             deliveryFee: r.deliveryFee,
           }))}
+          defaultDeliveryFee={defaultDeliveryFee}
         />
 
-        {/* ── Taxa de entrega padrão ──────────────────────────────────────── */}
-        <DefaultDeliveryFeeForm initialFee={defaultDeliveryFee} />
+        {/* ── Informações da loja ──────────────────────────────────────────── */}
+        <StoreInfoSettings currentWhatsapp={currentWhatsapp} />
 
-        {/* ── WhatsApp da loja ────────────────────────────────────────────── */}
-        <WhatsappForm initialWhatsapp={currentWhatsapp} />
-
-        {/* ── Endereço de retirada ─────────────────────────────────────────── */}
-        <PickupAddressForm initialAddress={pickupAddress} />
-
-        {/* ── WhatsApp messages ───────────────────────────────────────────── */}
-        <div className="rounded-xl border border-line bg-surface p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-0.5">
-            <h2 className="font-semibold text-foreground">
-              Mensagens WhatsApp
-            </h2>
-            <p className="text-sm text-foreground-muted">
-              Configure as mensagens enviadas ao aprovar ou recusar pedidos.
-            </p>
-          </div>
-          <Link
-            href="/dashboard/settings/messages"
-            className="shrink-0 rounded-lg border border-line px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover transition-colors self-start sm:self-auto"
-          >
-            Configurar
-          </Link>
-        </div>
+        {/* ── Mensagens ───────────────────────────────────────────────────── */}
+        <ContactSettings />
       </div>
     </main>
   );
