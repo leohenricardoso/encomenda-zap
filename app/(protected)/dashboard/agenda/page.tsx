@@ -9,9 +9,11 @@ import { getSession } from "@/infra/http/auth/getSession";
 import {
   getStoreScheduleUseCase,
   listPickupSlotsUseCase,
+  getMinimumAdvanceDaysUseCase,
 } from "@/infra/composition";
 import { AgendaCalendar } from "./_components/AgendaCalendar";
 import { PickupSlotsPanel } from "./_components/PickupSlotsPanel";
+import { MinimumAdvanceDaysForm } from "./_components/MinimumAdvanceDaysForm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,7 +37,7 @@ export default async function AgendaPage() {
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth(); // 0-based
 
-  const [{ days }, { slots }] = await Promise.all([
+  const [{ days }, { slots }, minimumAdvanceDays] = await Promise.all([
     getStoreScheduleUseCase.execute({
       storeId: session.storeId,
       from: firstDayOfMonth(year, month),
@@ -45,6 +47,7 @@ export default async function AgendaPage() {
       storeId: session.storeId,
       activeOnly: false,
     }),
+    getMinimumAdvanceDaysUseCase.execute(session.storeId),
   ]);
 
   return (
@@ -60,14 +63,14 @@ export default async function AgendaPage() {
             são abertos por padrão.
           </p>
         </div>
-
         {/* ── Calendar ────────────────────────────────────────────────────── */}
         <AgendaCalendar
           initialDays={days}
           initialYear={year}
           initialMonth={month}
         />
-
+        {/* ── Minimum advance days ────────────────────────────────────── */}
+        <MinimumAdvanceDaysForm initialDays={minimumAdvanceDays} />{" "}
         {/* ── Pickup slots ────────────────────────────────────────────────── */}
         <PickupSlotsPanel initialSlots={slots} />
       </div>

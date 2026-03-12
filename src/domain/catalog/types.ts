@@ -77,5 +77,7 @@ export interface StoreCatalog {
   pickupAddress: StorePickupAddress | null;
   /** Default delivery fee applied when delivery is unrestricted (no CEP ranges). */
   defaultDeliveryFee: number;
+  /** Minimum number of days in advance customers must place orders (0 = same-day). */
+  minimumAdvanceDays: number;
   products: CatalogProduct[];
 }

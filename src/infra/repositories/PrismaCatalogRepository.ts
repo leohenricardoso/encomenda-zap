@@ -35,6 +35,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         slug: true,
         whatsapp: true,
         defaultDeliveryFee: true,
+        minimumAdvanceDays: true,
         pickupLocationName: true,
         pickupStreet: true,
         pickupNumber: true,
@@ -100,6 +101,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       whatsapp: store.whatsapp,
       pickupAddress,
       defaultDeliveryFee: Number(store.defaultDeliveryFee),
+      minimumAdvanceDays: store.minimumAdvanceDays,
       products: store.products.map((p) => this.toProduct(p)),
     };
   }

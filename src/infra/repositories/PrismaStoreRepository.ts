@@ -143,4 +143,19 @@ export class PrismaStoreRepository implements IStoreRepository {
       data: { defaultDeliveryFee: fee },
     });
   }
+
+  async findMinimumAdvanceDays(storeId: string): Promise<number> {
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { minimumAdvanceDays: true },
+    });
+    return store?.minimumAdvanceDays ?? 1;
+  }
+
+  async updateMinimumAdvanceDays(storeId: string, days: number): Promise<void> {
+    await prisma.store.update({
+      where: { id: storeId },
+      data: { minimumAdvanceDays: days },
+    });
+  }
 }

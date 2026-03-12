@@ -77,6 +77,8 @@ import { UpdateStoreWhatsappUseCase } from "@/application/store/UpdateStoreWhats
 import { GetStorePickupAddressUseCase } from "@/application/store/GetStorePickupAddressUseCase";
 import { UpdateStorePickupAddressUseCase } from "@/application/store/UpdateStorePickupAddressUseCase";
 import { UpdateDefaultDeliveryFeeUseCase } from "@/application/store/UpdateDefaultDeliveryFeeUseCase";
+import { GetMinimumAdvanceDaysUseCase } from "@/application/store/GetMinimumAdvanceDaysUseCase";
+import { UpdateMinimumAdvanceDaysUseCase } from "@/application/store/UpdateMinimumAdvanceDaysUseCase";
 import { AddProductImageUseCase } from "@/application/productImage/AddProductImageUseCase";
 import { GetProductImagesUseCase } from "@/application/productImage/GetProductImagesUseCase";
 import { RemoveProductImageUseCase } from "@/application/productImage/RemoveProductImageUseCase";
@@ -274,6 +276,12 @@ export const updateStorePickupAddressUseCase =
 
 export const updateDefaultDeliveryFeeUseCase =
   new UpdateDefaultDeliveryFeeUseCase(storeRepo);
+
+export const getMinimumAdvanceDaysUseCase = new GetMinimumAdvanceDaysUseCase(
+  storeRepo,
+);
+export const updateMinimumAdvanceDaysUseCase =
+  new UpdateMinimumAdvanceDaysUseCase(storeRepo);
 
 // Helper: read default delivery fee directly via storeRepo
 export { storeRepo };

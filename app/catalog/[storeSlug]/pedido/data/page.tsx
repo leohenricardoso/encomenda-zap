@@ -15,10 +15,8 @@ interface Props {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function tomorrowUtc(): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function addDays(date: string, n: number): string {
@@ -71,7 +69,7 @@ export default async function EscolherDataPage({ params }: Props) {
     notFound();
   }
 
-  const from = tomorrowUtc();
+  const from = addDays(todayUtc(), catalog.minimumAdvanceDays);
   const to = addDays(from, 29); // 30-day window
 
   // 2. Fetch schedule — falls back gracefully if service throws

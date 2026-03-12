@@ -187,13 +187,6 @@ export class PlaceOrderService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    if (input.deliveryDate <= new Date()) {
-      throw new AppError(
-        "deliveryDate must be a future date.",
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
-    }
-
     // Fulfillment-type-specific validation
     if (input.fulfillmentType === FulfillmentType.DELIVERY) {
       if (!input.deliveryCep?.trim()) {
@@ -242,7 +235,25 @@ export class PlaceOrderService {
       whatsapp: storeWhatsapp,
       pickupAddress,
       defaultDeliveryFee,
+      minimumAdvanceDays,
     } = catalog;
+
+    // Validate delivery date against the store's minimum advance days setting.
+    // Comparison is at UTC-day granularity to avoid timezone-related off-by-one errors.
+    const todayUtc = new Date();
+    todayUtc.setUTCHours(0, 0, 0, 0);
+    const minDateUtc = new Date(todayUtc);
+    minDateUtc.setUTCDate(minDateUtc.getUTCDate() + minimumAdvanceDays);
+    const orderDateUtc = new Date(input.deliveryDate);
+    orderDateUtc.setUTCHours(0, 0, 0, 0);
+    if (orderDateUtc < minDateUtc) {
+      throw new AppError(
+        minimumAdvanceDays <= 1
+          ? "A data do pedido deve ser uma data futura."
+          : `O pedido deve ser feito com no mínimo ${minimumAdvanceDays} dias de antecedência.`,
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
 
     // ── 2b. Resolve delivery fee (DELIVERY orders only) ─────────────────────
 

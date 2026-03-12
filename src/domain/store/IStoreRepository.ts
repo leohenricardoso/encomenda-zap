@@ -47,4 +47,10 @@ export interface IStoreRepository {
 
   /** Persists the store's default delivery fee for unrestricted delivery. */
   updateDefaultDeliveryFee(storeId: string, fee: number): Promise<void>;
+
+  /** Returns the minimum number of days in advance customers must place orders. */
+  findMinimumAdvanceDays(storeId: string): Promise<number>;
+
+  /** Persists the store's minimum advance days setting. */
+  updateMinimumAdvanceDays(storeId: string, days: number): Promise<void>;
 }

@@ -19,6 +19,9 @@ model Store {
   isActive  Boolean  @default(true)
   /// Default delivery fee applied when no CEP ranges are configured (unrestricted delivery).
   defaultDeliveryFee Decimal @default(0) @db.Decimal(10, 2)
+  /// Minimum number of days in advance customers must place orders.
+  /// 0 = same-day orders allowed; 1 = tomorrow minimum (default).
+  minimumAdvanceDays Int     @default(1)
   // ─── Pickup address (optional — store configures this in settings)
   pickupLocationName   String?
   pickupStreet         String?
