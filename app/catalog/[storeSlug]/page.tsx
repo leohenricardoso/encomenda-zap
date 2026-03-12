@@ -2,10 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getStoreCatalogUseCase } from "@/infra/composition";
 import { CatalogHeader } from "./_components/CatalogHeader";
-import { CatalogProductCard } from "./_components/CatalogProductCard";
-import { CatalogEmptyState } from "./_components/CatalogEmptyState";
+import { CatalogProductList } from "./_components/CatalogProductList";
 import { CatalogPickupInfo } from "./_components/CatalogPickupInfo";
-import { CartFloatingBar } from "./_components/CartFloatingBar";
+
 import { WhatsappFab } from "./_components/WhatsappFab";
 import { CatalogCategoryTabs } from "./_components/CatalogCategoryTabs";
 
@@ -69,6 +68,7 @@ export default async function CatalogPage({ params }: Props) {
       <CatalogHeader
         storeName={catalog.name}
         productCount={catalog.products.length}
+        storeSlug={storeSlug}
       />
 
       {/* ── Category tabs ─────────────────────────────────────────────── */}
@@ -79,21 +79,9 @@ export default async function CatalogPage({ params }: Props) {
         />
       )}
 
-      {/* ── Product grid ─────────────────────────────────────────────── */}
-      <main className="mx-auto w-full max-w-screen-xl px-4 py-8 pb-28 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {catalog.products.length === 0 ? (
-            <CatalogEmptyState />
-          ) : (
-            catalog.products.map((product) => (
-              <CatalogProductCard
-                key={product.id}
-                product={product}
-                storeSlug={storeSlug}
-              />
-            ))
-          )}
-        </div>
+      {/* ── Product list ─────────────────────────────────────────────── */}
+      <main className="mx-auto w-full max-w-screen-xl px-4 py-4 sm:px-6 lg:px-8">
+        <CatalogProductList products={catalog.products} storeSlug={storeSlug} />
 
         {/* ── Pickup address ─────────────────────────────────────────── */}
         <div className="mt-6 max-w-sm">
@@ -114,9 +102,6 @@ export default async function CatalogPage({ params }: Props) {
           </span>
         </p>
       </footer>
-
-      {/* ── Floating cart bar (Client Component — reads sessionStorage) ─ */}
-      <CartFloatingBar storeSlug={storeSlug} />
 
       {/* ── WhatsApp FAB — above cart bar, right side ──────────────── */}
       <WhatsappFab whatsapp={catalog.whatsapp} storeName={catalog.name} />

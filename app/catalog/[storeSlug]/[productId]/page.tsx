@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getStoreCatalogUseCase } from "@/infra/composition";
 import { CatalogHeader } from "../_components/CatalogHeader";
-import { CartFloatingBar } from "../_components/CartFloatingBar";
 import { WhatsappFab } from "../_components/WhatsappFab";
 import { ProductDetailClient } from "../_components/ProductDetailClient";
 
@@ -72,10 +71,11 @@ export default async function ProductDetailPage({ params }: Props) {
       <CatalogHeader
         storeName={catalog.name}
         productCount={catalog.products.length}
+        storeSlug={storeSlug}
       />
 
       {/* ── Product detail ───────────────────────────────────────────── */}
-      <main className="mx-auto w-full max-w-screen-xl px-4 py-8 pb-28 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-screen-xl px-4 py-8 sm:px-6 lg:px-8">
         <ProductDetailClient product={product} storeSlug={storeSlug} />
       </main>
 
@@ -88,9 +88,6 @@ export default async function ProductDetailPage({ params }: Props) {
           </span>
         </p>
       </footer>
-
-      {/* ── Floating cart bar ─────────────────────────────────────────── */}
-      <CartFloatingBar storeSlug={storeSlug} />
 
       {/* ── WhatsApp FAB ──────────────────────────────────────────────── */}
       <WhatsappFab whatsapp={catalog.whatsapp} storeName={catalog.name} />

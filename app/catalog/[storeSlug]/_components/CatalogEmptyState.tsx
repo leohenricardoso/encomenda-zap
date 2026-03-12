@@ -1,7 +1,12 @@
+interface Props {
+  message?: string;
+}
+
 /**
  * CatalogEmptyState — shown when the store has no active products yet.
+ * Accepts an optional custom message for category-filtered views.
  */
-export function CatalogEmptyState() {
+export function CatalogEmptyState({ message }: Props = {}) {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
       {/* Icon */}
@@ -29,7 +34,8 @@ export function CatalogEmptyState() {
         Nenhum produto disponível
       </p>
       <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
-        O catálogo desta loja ainda não possui produtos cadastrados.
+        {message ??
+          "O catálogo desta loja ainda não possui produtos cadastrados."}
       </p>
     </div>
   );

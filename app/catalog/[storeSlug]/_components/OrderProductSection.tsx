@@ -10,7 +10,9 @@ import {
   cartItemKey,
 } from "../_lib/cart";
 import { PriceDisplay } from "./PriceDisplay";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
+type AddState = "idle" | "adding" | "added";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function resolveUnitPrice(
@@ -52,8 +54,7 @@ export function OrderProductSection({
   );
   const [quantity, setQuantity] = useState(Math.max(product.minQuantity, 1));
   const [validationError, setValidationError] = useState<string | null>(null);
-  /** Briefly true after add — drives the "✓ Adicionado!" feedback. */
-  const [justAdded, setJustAdded] = useState(false);
+  const [addState, setAddState] = useState<AddState>("idle");
 
   // How many of THIS item (product+variant) is already in the cart
   const [inCartQty, setInCartQty] = useState<number>(0);
@@ -108,7 +109,9 @@ export function OrderProductSection({
       setValidationError("Não foi possível determinar o preço.");
       return;
     }
+    if (addState !== "idle") return;
 
+    setAddState("adding");
     const prev = readCart();
     const next = addOrUpdateItem(prev, storeSlug, {
       productId: product.id,
@@ -121,12 +124,11 @@ export function OrderProductSection({
     writeCart(next);
     syncFromCart();
 
-    // Notify CartFloatingBar and CartDrawer on the same page.
+    // Notify CartHeaderButton and CartDrawer on the same page.
     window.dispatchEvent(new Event("cart:updated"));
 
-    // Brief "Adicionado!" feedback — reverts after 1.5 s.
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1500);
+    setAddState("added");
+    setTimeout(() => setAddState("idle"), 1000);
   }
 
   function handleRemove() {
@@ -253,21 +255,26 @@ export function OrderProductSection({
         <button
           type="button"
           onClick={handleAddOrUpdate}
+          disabled={addState === "adding"}
           className={[
             "w-full min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold ring-focus cursor-pointer",
             "transition-all duration-200 active:scale-[.98]",
-            justAdded
+            addState === "added"
               ? "bg-green-600 text-white"
-              : isInCart
-                ? "bg-accent/10 text-accent hover:bg-accent/20"
-                : "bg-foreground text-surface hover:bg-foreground/90",
+              : addState === "adding"
+                ? "bg-foreground/60 text-surface cursor-not-allowed"
+                : isInCart
+                  ? "bg-accent/10 text-accent hover:bg-accent/20"
+                  : "bg-foreground text-surface hover:bg-foreground/90",
           ].join(" ")}
         >
-          {justAdded
+          {addState === "added"
             ? "✓ Adicionado!"
-            : isInCart
-              ? "Atualizar quantidade"
-              : "Adicionar ao carrinho"}
+            : addState === "adding"
+              ? "Adicionando…"
+              : isInCart
+                ? "Atualizar quantidade"
+                : "Adicionar ao carrinho"}
         </button>
 
         {isInCart && (
