@@ -49,6 +49,18 @@ export function OrderItemsCard({ items }: OrderItemsCardProps) {
                         {item.variantLabel}
                       </p>
                     )}
+                    {item.categoryNames.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {item.categoryNames.map((cat) => (
+                          <span
+                            key={cat}
+                            className="rounded-full bg-surface-subtle border border-line px-2 py-0.5 text-xs text-foreground-muted"
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {hasDiscount && (
                       <p className="text-xs text-green-700 mt-0.5">
                         Desconto: −{formatCurrency(item.discountAmount)}/un

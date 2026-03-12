@@ -11,6 +11,15 @@ import type { StorePickupAddress } from "@/domain/store/types";
  * Future: add `imageUrl`, `tags`, and other discovery-relevant fields here.
  */
 
+// ─── Catalog Category ────────────────────────────────────────────────────────
+
+export interface StoreCatalogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  position: number;
+}
+
 // ─── Catalog Image ──────────────────────────────────────────────────────────
 
 /**
@@ -79,5 +88,7 @@ export interface StoreCatalog {
   defaultDeliveryFee: number;
   /** Minimum number of days in advance customers must place orders (0 = same-day). */
   minimumAdvanceDays: number;
+  /** Active categories ordered by position. */
+  categories: StoreCatalogCategory[];
   products: CatalogProduct[];
 }

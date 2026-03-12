@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { NewProductImagePicker } from "./NewProductImagePicker";
 
@@ -31,6 +31,8 @@ interface Props {
   /** Defined → edit mode (PUT /api/products/:productId). Undefined → create mode (POST /api/products). */
   productId?: string;
   initialValues?: Partial<ProductFormValues & { variants?: VariantRow[] }>;
+  /** Pre-selected category IDs (edit mode). */
+  initialCategoryIds?: string[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -54,7 +56,11 @@ const EMPTY_VARIANT: VariantRow = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ProductForm({ productId, initialValues }: Props) {
+export function ProductForm({
+  productId,
+  initialValues,
+  initialCategoryIds,
+}: Props) {
   const router = useRouter();
   const isEditMode = productId !== undefined;
 
@@ -75,6 +81,27 @@ export function ProductForm({ productId, initialValues }: Props) {
 
   /** Files staged for upload in create mode (uploaded after product creation). */
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+
+  /** Available categories fetched on mount. */
+  const [availableCategories, setAvailableCategories] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
+    initialCategoryIds ?? [],
+  );
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray((data as { data?: unknown }).data)) {
+          setAvailableCategories(
+            (data as { data: Array<{ id: string; name: string }> }).data,
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // ─── Validation ────────────────────────────────────────────────────────────
 
@@ -114,6 +141,10 @@ export function ProductForm({ productId, initialValues }: Props) {
         }
       }
     });
+
+    if (selectedCategoryIds.length === 0) {
+      next.categoryIds = "Selecione pelo menos uma categoria.";
+    }
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -162,6 +193,7 @@ export function ProductForm({ productId, initialValues }: Props) {
       description: values.description.trim() || undefined,
       isActive: values.isActive,
       minQuantity: parseInt(values.minQuantity, 10),
+      categoryIds: selectedCategoryIds,
     };
 
     if (hasVariants) {
@@ -308,6 +340,56 @@ export function ProductForm({ productId, initialValues }: Props) {
           placeholder="Detalhes do produto, ingredientes, tamanhos…"
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
+      </div>
+
+      {/* Categories */}
+      <div>
+        <span className="block text-sm font-medium text-gray-700 mb-2">
+          Categorias{" "}
+          <span aria-hidden="true" className="text-red-500">
+            *
+          </span>
+        </span>
+        {availableCategories.length === 0 ? (
+          <p className="text-xs text-gray-400 italic">
+            Nenhuma categoria disponível.{" "}
+            <a
+              href="/dashboard/categories/new"
+              className="text-indigo-600 hover:underline"
+            >
+              Criar categoria
+            </a>
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {availableCategories.map((cat) => {
+              const selected = selectedCategoryIds.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedCategoryIds((prev) =>
+                      selected
+                        ? prev.filter((id) => id !== cat.id)
+                        : [...prev, cat.id],
+                    )
+                  }
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    selected
+                      ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                      : "border-gray-300 bg-white text-gray-600 hover:border-indigo-300"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {errors.categoryIds && (
+          <p className="mt-1 text-xs text-red-600">{errors.categoryIds}</p>
+        )}
       </div>
 
       {/* Fixed price — hidden when variants are present */}

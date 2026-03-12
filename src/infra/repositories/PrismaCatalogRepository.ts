@@ -2,6 +2,7 @@ import { prisma } from "@/infra/prisma";
 import type { ICatalogRepository } from "@/domain/catalog/ICatalogRepository";
 import type {
   StoreCatalog,
+  StoreCatalogCategory,
   CatalogProduct,
   CatalogImage,
   CatalogVariant,
@@ -26,7 +27,11 @@ import type {
  * for both Products and their Variants.
  */
 export class PrismaCatalogRepository implements ICatalogRepository {
-  async findBySlug(slug: string): Promise<StoreCatalog | null> {
+  async findBySlug(
+    slug: string,
+    categorySlug?: string,
+  ): Promise<StoreCatalog | null> {
+    // ── 1. Store info + categories (no products here) ─────────────────────
     const store = await prisma.store.findFirst({
       where: { slug, isActive: true },
       select: {
@@ -43,39 +48,74 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         pickupCity: true,
         pickupComplement: true,
         pickupReference: true,
-        products: {
+        categories: {
           where: { isActive: true },
-          orderBy: { name: "asc" },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            minQuantity: true,
-            variants: {
-              where: { isActive: true },
-              orderBy: { sortOrder: "asc" },
-              select: {
-                id: true,
-                label: true,
-                price: true,
-                pricingType: true,
-                weightValue: true,
-                weightUnit: true,
-                isActive: true,
-                sortOrder: true,
-              },
-            },
-            images: {
-              orderBy: { position: "asc" },
-              select: { id: true, imageUrl: true, position: true },
-            },
-          },
+          orderBy: { position: "asc" },
+          select: { id: true, name: true, slug: true, position: true },
         },
       },
     });
 
     if (!store || !store.slug) return null;
+
+    // ── 2. Products ───────────────────────────────────────────────────────
+    // When a category filter is active, query via ProductCategory to preserve
+    // the saved sort order (position). Otherwise fetch all active products
+    // for the store ordered by name.
+    const productSelect = {
+      id: true,
+      name: true,
+      description: true,
+      price: true,
+      minQuantity: true,
+      variants: {
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" as const },
+        select: {
+          id: true,
+          label: true,
+          price: true,
+          pricingType: true,
+          weightValue: true,
+          weightUnit: true,
+          isActive: true,
+          sortOrder: true,
+        },
+      },
+      images: {
+        orderBy: { position: "asc" as const },
+        select: { id: true, imageUrl: true, position: true },
+      },
+    } as const;
+
+    let products: CatalogProduct[];
+
+    if (categorySlug) {
+      const targetCategory =
+        store.categories.find((c) => c.slug === categorySlug) ?? null;
+
+      if (!targetCategory) {
+        products = [];
+      } else {
+        const pcRows = await prisma.productCategory.findMany({
+          where: {
+            categoryId: targetCategory.id,
+            storeId: store.id,
+            product: { isActive: true },
+          },
+          orderBy: { position: "asc" },
+          select: { product: { select: productSelect } },
+        });
+        products = pcRows.map((row) => this.toProduct(row.product));
+      }
+    } else {
+      const rawProducts = await prisma.product.findMany({
+        where: { storeId: store.id, isActive: true },
+        orderBy: { name: "asc" },
+        select: productSelect,
+      });
+      products = rawProducts.map((p) => this.toProduct(p));
+    }
 
     const pickupAddress =
       store.pickupLocationName &&
@@ -102,7 +142,15 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       pickupAddress,
       defaultDeliveryFee: Number(store.defaultDeliveryFee),
       minimumAdvanceDays: store.minimumAdvanceDays,
-      products: store.products.map((p) => this.toProduct(p)),
+      categories: store.categories.map(
+        (c): StoreCatalogCategory => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          position: c.position,
+        }),
+      ),
+      products: products,
     };
   }
 

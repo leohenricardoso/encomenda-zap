@@ -41,6 +41,8 @@ import { PrismaPickupSlotRepository } from "@/infra/repositories/PrismaPickupSlo
 import { PrismaCepRangeRepository } from "@/infra/repositories/PrismaCepRangeRepository";
 import { PrismaStoreMessageRepository } from "@/infra/repositories/PrismaStoreMessageRepository";
 import { PrismaProductImageRepository } from "@/infra/repositories/PrismaProductImageRepository";
+import { PrismaCategoryRepository } from "@/infra/repositories/PrismaCategoryRepository";
+import { PrismaProductCategoryRepository } from "@/infra/repositories/PrismaProductCategoryRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -84,6 +86,14 @@ import { GetProductImagesUseCase } from "@/application/productImage/GetProductIm
 import { RemoveProductImageUseCase } from "@/application/productImage/RemoveProductImageUseCase";
 import { SetImageAsPrimaryUseCase } from "@/application/productImage/SetImageAsPrimaryUseCase";
 import { UploadProductImageUseCase } from "@/application/productImage/UploadProductImageUseCase";
+import { ListCategoriesUseCase } from "@/application/category/ListCategoriesUseCase";
+import { CreateCategoryUseCase } from "@/application/category/CreateCategoryUseCase";
+import { UpdateCategoryUseCase } from "@/application/category/UpdateCategoryUseCase";
+import { DeleteCategoryUseCase } from "@/application/category/DeleteCategoryUseCase";
+import { AssignProductToCategoryUseCase } from "@/application/category/AssignProductToCategoryUseCase";
+import { RemoveProductFromCategoryUseCase } from "@/application/category/RemoveProductFromCategoryUseCase";
+import { ReorderCategoryProductsUseCase } from "@/application/category/ReorderCategoryProductsUseCase";
+import { GetCategoryProductsUseCase } from "@/application/category/GetCategoryProductsUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -96,6 +106,7 @@ import { StorePickupSlotController } from "@/controllers/http/StorePickupSlotCon
 import { StoreCepRangeController } from "@/controllers/http/StoreCepRangeController";
 import { ProductImageController } from "@/controllers/http/ProductImageController";
 import { ProductImageUploadController } from "@/controllers/http/ProductImageUploadController";
+import { CategoryController } from "@/controllers/http/CategoryController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -113,14 +124,22 @@ const scheduleRepo = new PrismaStoreScheduleRepository();
 const pickupSlotRepo = new PrismaPickupSlotRepository();
 const cepRangeRepo = new PrismaCepRangeRepository();
 const imageRepo = new PrismaProductImageRepository();
+const categoryRepo = new PrismaCategoryRepository();
+const productCategoryRepo = new PrismaProductCategoryRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
 
-const createProductUseCase = new CreateProductUseCase(productRepo);
+const createProductUseCase = new CreateProductUseCase(
+  productRepo,
+  productCategoryRepo,
+);
 const listProductsUseCase = new ListProductsUseCase(productRepo);
 const getProductByIdUseCase = new GetProductByIdUseCase(productRepo);
-const updateProductUseCase = new UpdateProductUseCase(productRepo);
+const updateProductUseCase = new UpdateProductUseCase(
+  productRepo,
+  productCategoryRepo,
+);
 const deleteProductUseCase = new DeleteProductUseCase(productRepo);
 const createVariantUseCase = new CreateVariantUseCase(productRepo);
 const updateVariantUseCase = new UpdateVariantUseCase(productRepo);
@@ -285,3 +304,34 @@ export const updateMinimumAdvanceDaysUseCase =
 
 // Helper: read default delivery fee directly via storeRepo
 export { storeRepo };
+
+// ─── Categories ─────────────────────────────────────────────────────────────────────────────
+
+export const listCategoriesUseCase = new ListCategoriesUseCase(categoryRepo);
+export const createCategoryUseCase = new CreateCategoryUseCase(categoryRepo);
+export const updateCategoryUseCase = new UpdateCategoryUseCase(categoryRepo);
+export const deleteCategoryUseCase = new DeleteCategoryUseCase(categoryRepo);
+export const assignProductToCategoryUseCase =
+  new AssignProductToCategoryUseCase(
+    categoryRepo,
+    productCategoryRepo,
+    productRepo,
+  );
+export const removeProductFromCategoryUseCase =
+  new RemoveProductFromCategoryUseCase(productCategoryRepo);
+export const reorderCategoryProductsUseCase =
+  new ReorderCategoryProductsUseCase(productCategoryRepo);
+export const getCategoryProductsUseCase = new GetCategoryProductsUseCase(
+  productCategoryRepo,
+);
+
+export const categoryController = new CategoryController(
+  listCategoriesUseCase,
+  createCategoryUseCase,
+  updateCategoryUseCase,
+  deleteCategoryUseCase,
+  assignProductToCategoryUseCase,
+  removeProductFromCategoryUseCase,
+  reorderCategoryProductsUseCase,
+  getCategoryProductsUseCase,
+);

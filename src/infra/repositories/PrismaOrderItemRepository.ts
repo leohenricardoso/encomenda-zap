@@ -43,6 +43,7 @@ export class PrismaOrderItemRepository implements IOrderItemRepository {
       unitPrice: Number(raw.unitPrice),
       discountAmount: Number(raw.discountAmount),
       createdAt: raw.createdAt,
+      categoryNames: [],
     };
   }
 

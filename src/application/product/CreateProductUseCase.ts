@@ -1,6 +1,7 @@
 import { AppError } from "@/shared/errors/AppError";
 import { HttpStatus } from "@/shared/http/statuses";
 import type { IProductRepository } from "@/domain/product/IProductRepository";
+import type { IProductCategoryRepository } from "@/domain/category/IProductCategoryRepository";
 import type {
   CreateProductInput,
   ProductResponse,
@@ -23,7 +24,10 @@ const MAX_VARIANTS = 50;
  * storeId always comes from the authenticated session, never from the client.
  */
 export class CreateProductUseCase {
-  constructor(private readonly repo: IProductRepository) {}
+  constructor(
+    private readonly repo: IProductRepository,
+    private readonly productCategoryRepo: IProductCategoryRepository,
+  ) {}
 
   async execute(input: CreateProductInput): Promise<ProductResponse> {
     // ── Product-level validations ──────────────────────────────────────────
@@ -115,7 +119,14 @@ export class CreateProductUseCase {
       }
     }
 
-    return this.repo.create({
+    if (!input.categoryIds || input.categoryIds.length === 0) {
+      throw new AppError(
+        "Pelo menos uma categoria deve ser atribuída ao produto.",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const product = await this.repo.create({
       storeId: input.storeId,
       name: input.name.trim(),
       description: input.description?.trim(),
@@ -124,5 +135,13 @@ export class CreateProductUseCase {
       isActive: input.isActive ?? true,
       variants: input.variants ?? [],
     });
+
+    await this.productCategoryRepo.replaceForProduct(
+      product.id,
+      input.storeId,
+      input.categoryIds,
+    );
+
+    return product;
   }
 }

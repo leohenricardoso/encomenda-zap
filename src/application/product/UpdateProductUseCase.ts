@@ -1,6 +1,7 @@
 import { AppError } from "@/shared/errors/AppError";
 import { HttpStatus } from "@/shared/http/statuses";
 import type { IProductRepository } from "@/domain/product/IProductRepository";
+import type { IProductCategoryRepository } from "@/domain/category/IProductCategoryRepository";
 import type {
   UpdateProductInput,
   ProductResponse,
@@ -20,7 +21,10 @@ const MAX_DESC_LENGTH = 1000;
  * mode to variant-priced mode after variants have been added).
  */
 export class UpdateProductUseCase {
-  constructor(private readonly repo: IProductRepository) {}
+  constructor(
+    private readonly repo: IProductRepository,
+    private readonly productCategoryRepo: IProductCategoryRepository,
+  ) {}
 
   async execute(
     id: string,
@@ -106,6 +110,15 @@ export class UpdateProductUseCase {
       }
     }
 
+    if (input.categoryIds !== undefined) {
+      if (input.categoryIds.length === 0) {
+        throw new AppError(
+          "Pelo menos uma categoria deve ser atribuída ao produto.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
     const updated = await this.repo.update(id, storeId, input);
     if (!updated) {
       throw new AppError("Product not found.", HttpStatus.NOT_FOUND);
@@ -121,7 +134,23 @@ export class UpdateProductUseCase {
       if (!withVariants) {
         throw new AppError("Product not found.", HttpStatus.NOT_FOUND);
       }
+
+      if (input.categoryIds !== undefined) {
+        await this.productCategoryRepo.replaceForProduct(
+          id,
+          storeId,
+          input.categoryIds,
+        );
+      }
       return withVariants;
+    }
+
+    if (input.categoryIds !== undefined) {
+      await this.productCategoryRepo.replaceForProduct(
+        id,
+        storeId,
+        input.categoryIds,
+      );
     }
 
     return updated;

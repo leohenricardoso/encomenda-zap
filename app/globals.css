@@ -28,8 +28,8 @@
   --color-foreground-muted: #64748b; /* Secondary text — slate-500 */
 
   /* ── Brand accent (used for links, focus rings) ── */
-  --color-accent: #3b82f6; /* blue-500 */
-  --color-accent-hover: #2563eb; /* blue-600 */
+  --color-accent: #000000; /* black */
+  --color-accent-hover: #c6c6c6; /* blue-600 */
 
   /* ── Borders ── */
   --color-line: #e2e8f0; /* Default border — slate-200 */
@@ -57,7 +57,6 @@
   --color-bg-muted: 248 250 252; /* surface-subtle */
   --color-primary: 15 23 42; /* foreground */
   --color-primary-foreground: 255 255 255; /* on-dark text */
-  --color-accent: 59 130 246; /* accent blue-500 */
   --color-border: 226 232 240; /* line */
   --color-text: 15 23 42; /* foreground */
   --color-text-muted: 100 116 139; /* foreground-muted */

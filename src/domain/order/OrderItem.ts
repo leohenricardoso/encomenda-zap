@@ -58,6 +58,8 @@ export interface OrderItem {
    */
   discountAmount: number;
   createdAt: Date;
+  /** Category names for the product at display time (not a frozen snapshot). */
+  categoryNames: string[];
 }
 
 // ─── Domain helpers ───────────────────────────────────────────────────────────

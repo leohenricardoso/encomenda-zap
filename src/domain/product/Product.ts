@@ -131,6 +131,8 @@ export interface CreateProductInput {
   minQuantity?: number;
   isActive?: boolean;
   variants?: CreateVariantInput[];
+  /** At least one category must be assigned. */
+  categoryIds?: string[];
 }
 
 export interface UpdateProductInput {
@@ -145,6 +147,8 @@ export interface UpdateProductInput {
    * Pass an empty array to remove all variants.
    */
   variants?: CreateVariantInput[];
+  /** When provided, replaces all current category assignments. Must be non-empty. */
+  categoryIds?: string[];
 }
 
 /** Safe public shape returned by all use cases and API routes. */

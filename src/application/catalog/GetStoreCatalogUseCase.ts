@@ -19,13 +19,14 @@ import type { StoreCatalog } from "@/domain/catalog/types";
 export class GetStoreCatalogUseCase {
   constructor(private readonly catalogRepo: ICatalogRepository) {}
 
-  async execute(slug: string): Promise<StoreCatalog> {
+  async execute(slug: string, categorySlug?: string): Promise<StoreCatalog> {
     if (!slug?.trim()) {
       throw new AppError("Store slug is required.", HttpStatus.BAD_REQUEST);
     }
 
     const catalog = await this.catalogRepo.findBySlug(
       slug.trim().toLowerCase(),
+      categorySlug?.trim().toLowerCase(),
     );
 
     if (!catalog) {

@@ -89,6 +89,11 @@ export class PrismaOrderRepository implements IOrderRepository {
     unitPrice: { toNumber(): number };
     discountAmount: { toNumber(): number };
     createdAt: Date;
+    product?: {
+      categories: {
+        category: { name: string };
+      }[];
+    } | null;
   }): OrderItem {
     return {
       id: raw.id,
@@ -101,6 +106,7 @@ export class PrismaOrderRepository implements IOrderRepository {
       unitPrice: Number(raw.unitPrice),
       discountAmount: Number(raw.discountAmount),
       createdAt: raw.createdAt,
+      categoryNames: raw.product?.categories.map((c) => c.category.name) ?? [],
     };
   }
 
@@ -191,7 +197,19 @@ export class PrismaOrderRepository implements IOrderRepository {
       },
       include: {
         customer: { select: { name: true, whatsapp: true } },
-        items: { orderBy: { createdAt: "asc" } },
+        items: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            product: {
+              select: {
+                categories: {
+                  select: { category: { select: { name: true } } },
+                  orderBy: { position: "asc" },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: [{ deliveryDate: "asc" }, { pickupTime: "asc" }],
     });
@@ -212,7 +230,19 @@ export class PrismaOrderRepository implements IOrderRepository {
       where: { id, storeId },
       include: {
         customer: { select: { name: true, whatsapp: true } },
-        items: { orderBy: { createdAt: "asc" } },
+        items: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            product: {
+              select: {
+                categories: {
+                  select: { category: { select: { name: true } } },
+                  orderBy: { position: "asc" },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (!row) return null;

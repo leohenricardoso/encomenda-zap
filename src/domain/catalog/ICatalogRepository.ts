@@ -9,6 +9,7 @@ import type { StoreCatalog } from "./types";
 export interface ICatalogRepository {
   /**
    * Looks up a store by its URL slug and returns its public catalog.
+   * When categorySlug is provided, only products in that category are returned.
    *
    * Returns null when:
    *  - No store exists with the given slug
@@ -17,5 +18,5 @@ export interface ICatalogRepository {
    * Products are returned ordered by name ascending; variants by sortOrder.
    * Only active products and active variants are included.
    */
-  findBySlug(slug: string): Promise<StoreCatalog | null>;
+  findBySlug(slug: string, categorySlug?: string): Promise<StoreCatalog | null>;
 }

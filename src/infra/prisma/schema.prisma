@@ -35,6 +35,7 @@ model Store {
 
   admin        Admin?
   products     Product[]
+  categories   Category[]
   customers    Customer[]
   orders       Order[]
   schedules    StoreSchedule[]
@@ -96,6 +97,7 @@ model Product {
   variants   ProductVariant[]
   images     ProductImage[]
   orderItems OrderItem[]
+  categories ProductCategory[]
 
   @@index([storeId])
   @@map("products")
@@ -463,4 +465,65 @@ model StoreCepRange {
 
   @@index([storeId])
   @@map("store_cep_ranges")
+}
+
+// ─── Category ─────────────────────────────────────────────────────────────────
+// A store-scoped product category used to organise the public catalog.
+//
+// Design notes:
+// ─ slug is unique per-store (@@unique([storeId, slug])) — used in the URL:
+//   /catalog/:storeSlug/c/:categorySlug
+// ─ position controls the display order in the catalog tab bar and admin list.
+// ─ isActive: false hides the category (and its products) from the catalog.
+//   Products can still belong to an inactive category; they just won't appear
+//   in the filtered view.
+
+model Category {
+  id        String   @id @default(uuid())
+  storeId   String
+  name      String
+  /// URL-safe slug used in the public catalog URL: /catalog/:slug/c/:categorySlug
+  slug      String
+  /// Display order in the catalog tab bar (lower = first).
+  position  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store    Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products ProductCategory[]
+
+  /// One slug per store — guarantees URL uniqueness per tenant.
+  @@unique([storeId, slug])
+  @@index([storeId])
+  @@map("categories")
+}
+
+// ─── ProductCategory ──────────────────────────────────────────────────────────
+// Join table linking Products to Categories (many-to-many).
+//
+// Design notes:
+// ─ position controls the display order of products within a category.
+//   Each category maintains its own independent ordering.
+// ─ storeId is denormalised for efficient tenant-scoped queries without joins.
+// ─ @@unique([productId, categoryId]) prevents duplicate assignments.
+
+model ProductCategory {
+  id         String   @id @default(uuid())
+  productId  String
+  categoryId String
+  /// Denormalised from Product — enables tenant-scoped queries.
+  storeId    String
+  /// Display order within this category (lower = first).
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  product  Product  @relation(fields: [productId],  references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, categoryId])
+  @@index([categoryId])
+  @@index([productId])
+  @@index([storeId])
+  @@map("product_categories")
 }

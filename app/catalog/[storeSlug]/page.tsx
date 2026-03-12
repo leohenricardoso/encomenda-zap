@@ -7,6 +7,7 @@ import { CatalogEmptyState } from "./_components/CatalogEmptyState";
 import { CatalogPickupInfo } from "./_components/CatalogPickupInfo";
 import { CartFloatingBar } from "./_components/CartFloatingBar";
 import { WhatsappFab } from "./_components/WhatsappFab";
+import { CatalogCategoryTabs } from "./_components/CatalogCategoryTabs";
 
 // ─── Revalidation ─────────────────────────────────────────────────────────────
 // ISR: serve cached HTML for up to 60 s, regenerate in background.
@@ -69,6 +70,14 @@ export default async function CatalogPage({ params }: Props) {
         storeName={catalog.name}
         productCount={catalog.products.length}
       />
+
+      {/* ── Category tabs ─────────────────────────────────────────────── */}
+      {catalog.categories.length > 0 && (
+        <CatalogCategoryTabs
+          storeSlug={storeSlug}
+          categories={catalog.categories}
+        />
+      )}
 
       {/* ── Product grid ─────────────────────────────────────────────── */}
       <main className="mx-auto w-full max-w-screen-xl px-4 py-8 pb-28 sm:px-6 lg:px-8">

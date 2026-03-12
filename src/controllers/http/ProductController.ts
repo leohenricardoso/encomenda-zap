@@ -44,8 +44,15 @@ export class ProductController {
   readonly create = withAuth(
     async (req: AuthenticatedRequest): Promise<NextResponse> => {
       const body = await this.parseJsonBody(req);
-      const { name, description, price, isActive, minQuantity, variants } =
-        body;
+      const {
+        name,
+        description,
+        price,
+        isActive,
+        minQuantity,
+        variants,
+        categoryIds,
+      } = body;
 
       try {
         const product = await this.createProductUseCase.execute({
@@ -78,6 +85,9 @@ export class ProductController {
                 sortOrder: v.sortOrder !== undefined ? Number(v.sortOrder) : 0,
               }))
             : [],
+          categoryIds: Array.isArray(categoryIds)
+            ? categoryIds.map(String)
+            : undefined,
         });
         return created(product);
       } catch (err) {
@@ -137,8 +147,15 @@ export class ProductController {
     ): Promise<NextResponse> => {
       const id = await this.extractId(args);
       const body = await this.parseJsonBody(req);
-      const { name, description, price, isActive, minQuantity, variants } =
-        body;
+      const {
+        name,
+        description,
+        price,
+        isActive,
+        minQuantity,
+        variants,
+        categoryIds,
+      } = body;
 
       try {
         const product = await this.updateProductUseCase.execute(
@@ -182,6 +199,9 @@ export class ProductController {
                     v.sortOrder !== undefined ? Number(v.sortOrder) : i,
                 }),
               ),
+            }),
+            ...(Array.isArray(categoryIds) && {
+              categoryIds: categoryIds.map(String),
             }),
           },
         );
