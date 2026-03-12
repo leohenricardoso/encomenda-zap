@@ -1,15 +1,15 @@
 import { FulfillmentType } from "@/domain/order/Order";
 import type { StorePickupAddress } from "@/domain/store/types";
-import { formatLongDate, formatCep, SectionTitle } from "./helpers";
+import { FulfillmentBadge } from "./FulfillmentBadge";
+import { formatLongDate, formatCep } from "./helpers";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-interface LogisticsSectionProps {
+interface LogisticsCardProps {
   fulfillmentType: FulfillmentType;
   deliveryDate: Date;
   pickupTime: string | null;
   pickupAddress: StorePickupAddress | null;
-  // DELIVERY fields
   deliveryCep: string | null;
   deliveryStreet: string | null;
   deliveryNumber: string | null;
@@ -19,9 +19,12 @@ interface LogisticsSectionProps {
 }
 
 /**
- * LogisticsSection — date, fulfillment type, pickup time or delivery address.
+ * LogisticsCard — fulfillment type, delivery date, pickup time and address.
+ *
+ * Shows the FulfillmentBadge inline with the section header so staff
+ * immediately know pickup vs delivery without reading the rows.
  */
-export function LogisticsSection({
+export function LogisticsCard({
   fulfillmentType,
   deliveryDate,
   pickupTime,
@@ -32,7 +35,7 @@ export function LogisticsSection({
   deliveryNeighborhood,
   deliveryCity,
   shippingAddress,
-}: LogisticsSectionProps) {
+}: LogisticsCardProps) {
   const isPickup = fulfillmentType === FulfillmentType.PICKUP;
 
   const addressLine = isPickup
@@ -45,26 +48,17 @@ export function LogisticsSection({
 
   return (
     <section aria-label="Logística">
-      <SectionTitle icon={<MapPinIcon />}>Logística</SectionTitle>
-      <div className="mt-3 rounded-xl border border-line bg-surface divide-y divide-line">
-        {/* Type tag */}
-        <LogRow
-          icon={isPickup ? <StoreIcon /> : <TruckIcon />}
-          label="Tipo"
-          value={
-            <span
-              className={[
-                "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                isPickup
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-purple-100 text-purple-700",
-              ].join(" ")}
-            >
-              {isPickup ? "Retirada" : "Entrega"}
-            </span>
-          }
-        />
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground-muted">
+          <span className="h-3.5 w-3.5 shrink-0">
+            <MapPinIcon />
+          </span>
+          Logística
+        </h2>
+        <FulfillmentBadge fulfillmentType={fulfillmentType} size="sm" />
+      </div>
 
+      <div className="mt-3 rounded-xl border border-line bg-surface divide-y divide-line overflow-hidden">
         {/* Date */}
         <LogRow
           icon={<CalendarIcon />}
@@ -88,8 +82,8 @@ export function LogisticsSection({
         {/* Pickup address */}
         {isPickup && (
           <LogRow
-            icon={<MapPinIcon />}
-            label="Endereço"
+            icon={<StoreIcon />}
+            label="Local de retirada"
             value={
               pickupAddress ? (
                 <span className="text-right leading-snug">
@@ -124,7 +118,7 @@ export function LogisticsSection({
           />
         )}
 
-        {/* Address */}
+        {/* Delivery address */}
         {!isPickup && addressLine && (
           <LogRow
             icon={<MapPinIcon />}
@@ -235,26 +229,6 @@ function StoreIcon() {
     >
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
       <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
-}
-
-function TruckIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="1" y="3" width="15" height="13" />
-      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-      <circle cx="5.5" cy="18.5" r="2.5" />
-      <circle cx="18.5" cy="18.5" r="2.5" />
     </svg>
   );
 }

@@ -1,27 +1,29 @@
 import type { OrderItem } from "@/domain/order/OrderItem";
-import { formatCurrency, SectionTitle } from "./helpers";
+import { formatCurrency } from "./helpers";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-interface ItemsSectionProps {
+interface OrderItemsCardProps {
   items: OrderItem[];
 }
 
 /**
- * ItemsSection — line items table with quantities, names, unit prices and totals.
+ * OrderItemsCard — order line items for preparation.
+ *
+ * Each row shows: quantity badge, product name, variant, unit price breakdown
+ * and line total. Financial summary lives in FinancialSummaryCard.
  */
-export function ItemsSection({ items }: ItemsSectionProps) {
-  const grandTotal = items.reduce(
-    (sum, item) => sum + (item.unitPrice - item.discountAmount) * item.quantity,
-    0,
-  );
-
+export function OrderItemsCard({ items }: OrderItemsCardProps) {
   return (
     <section aria-label="Itens do pedido">
-      <SectionTitle icon={<BoxIcon />}>Itens do pedido</SectionTitle>
+      <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground-muted">
+        <span className="h-3.5 w-3.5 shrink-0">
+          <ShoppingBagIcon />
+        </span>
+        Itens do pedido
+      </h2>
 
       <div className="mt-3 rounded-xl border border-line bg-surface overflow-hidden">
-        {/* Item rows */}
         <ul className="divide-y divide-line">
           {items.map((item, i) => {
             const linePrice = item.unitPrice - item.discountAmount;
@@ -31,11 +33,11 @@ export function ItemsSection({ items }: ItemsSectionProps) {
             return (
               <li
                 key={item.id ?? i}
-                className="flex items-start justify-between gap-3 px-4 py-3"
+                className="flex items-start justify-between gap-3 px-4 py-3.5"
               >
                 {/* Qty badge + product name */}
                 <div className="flex items-start gap-3 min-w-0">
-                  <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md bg-surface-subtle text-xs font-bold text-foreground-muted">
+                  <span className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg bg-surface-subtle border border-line text-sm font-bold text-foreground-muted tabular-nums">
                     {item.quantity}
                   </span>
                   <div className="min-w-0">
@@ -48,7 +50,7 @@ export function ItemsSection({ items }: ItemsSectionProps) {
                       </p>
                     )}
                     {hasDiscount && (
-                      <p className="text-xs text-green-600 mt-0.5">
+                      <p className="text-xs text-green-700 mt-0.5">
                         Desconto: −{formatCurrency(item.discountAmount)}/un
                       </p>
                     )}
@@ -70,16 +72,6 @@ export function ItemsSection({ items }: ItemsSectionProps) {
             );
           })}
         </ul>
-
-        {/* Grand total */}
-        <div className="flex items-center justify-between border-t border-line bg-surface-subtle px-4 py-3">
-          <span className="text-sm font-semibold text-foreground-muted uppercase tracking-wide">
-            Total
-          </span>
-          <span className="text-lg font-bold text-foreground tabular-nums">
-            {formatCurrency(grandTotal)}
-          </span>
-        </div>
       </div>
     </section>
   );
@@ -87,7 +79,7 @@ export function ItemsSection({ items }: ItemsSectionProps) {
 
 // ─── Icon ─────────────────────────────────────────────────────────────────────
 
-function BoxIcon() {
+function ShoppingBagIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -99,9 +91,9 @@ function BoxIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
     </svg>
   );
 }

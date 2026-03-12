@@ -58,3 +58,20 @@ export function whatsAppUrl(
       : `Olá ${firstName}, estamos falando sobre seu pedido.`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
+
+// ─── Section title helper ─────────────────────────────────────────────────────
+
+export function SectionTitle({
+  icon,
+  children,
+}: {
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground-muted">
+      {icon && <span className="h-3.5 w-3.5 shrink-0">{icon}</span>}
+      {children}
+    </h2>
+  );
+}

@@ -1,17 +1,18 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { getSession } from "@/infra/http/auth/getSession";
 import {
   getOrderUseCase,
   getStoreMessagesUseCase,
   getStorePickupAddressUseCase,
 } from "@/infra/composition";
-import { CustomerSection } from "./_components/CustomerSection";
-import { LogisticsSection } from "./_components/LogisticsSection";
-import { ItemsSection } from "./_components/ItemsSection";
-import { OrderDecisionBadge } from "./_components/OrderDecisionBadge";
 import { OrderStatusManager } from "../../_components/OrderStatusManager";
-import { formatLongDate, formatCurrency } from "./_components/helpers";
+import { OrderDetailHeader } from "./_components/OrderDetailHeader";
+import { OrderItemsCard } from "./_components/OrderItemsCard";
+import { OrderNotesCard } from "./_components/OrderNotesCard";
+import { CustomerInfoCard } from "./_components/CustomerInfoCard";
+import { LogisticsCard } from "./_components/LogisticsCard";
+import { FinancialSummaryCard } from "./_components/FinancialSummaryCard";
+import { formatLongDate } from "./_components/helpers";
 import {
   DEFAULT_MESSAGES,
   resolveMessage,
@@ -59,124 +60,84 @@ export default async function OrderDetailPage({ params }: Props) {
     ),
   )}`;
 
-  const totalAmount = order.items.reduce(
+  const subtotal = order.items.reduce(
     (sum, item) => sum + (item.unitPrice - item.discountAmount) * item.quantity,
     0,
   );
+  const totalAmount = subtotal + order.deliveryFee;
 
   return (
     /*
-     * Mobile: single column. Desktop: max-width centred.
-     * StatusActions is sticky-bottom on mobile, relative inside the flow on sm+.
+     * Two-column layout on desktop (md+): main column (2fr) + sidebar (1fr).
+     * Mobile: single-column, priority order top-to-bottom.
      */
     <div className="min-h-dvh flex flex-col">
-      {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur-sm px-4 py-3">
-        <div className="mx-auto max-w-2xl flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-foreground-muted hover:text-foreground transition-colors"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Voltar</span>
-          </Link>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              {order.orderNumber != null && (
-                <span className="shrink-0 rounded-md bg-foreground px-1.5 py-0.5 text-xs font-bold tabular-nums text-surface">
-                  #{order.orderNumber}
-                </span>
-              )}
-              <p className="font-semibold text-foreground truncate leading-snug">
-                {order.customerName}
-              </p>
-            </div>
-            <p className="text-xs text-foreground-muted capitalize">
-              {formatLongDate(order.deliveryDate)}
-            </p>
-          </div>
-          <span className="sm:hidden">
-            <OrderDecisionBadge status={order.status} size="sm" />
-          </span>
-          <span className="hidden sm:inline text-sm font-bold text-foreground tabular-nums">
-            {formatCurrency(totalAmount)}
-          </span>
-        </div>
-      </div>
+      {/* ── Sticky page header ───────────────────────────────────────────── */}
+      <OrderDetailHeader
+        orderNumber={order.orderNumber}
+        customerName={order.customerName}
+        deliveryDate={order.deliveryDate}
+        fulfillmentType={order.fulfillmentType}
+        totalAmount={totalAmount}
+        status={order.status}
+        trackingStatus={order.orderStatus}
+      />
 
-      {/* ── Content ──────────────────────────────────────────────────────── */}
+      {/* ── Content grid ─────────────────────────────────────────────────── */}
       <div className="flex-1 px-4 py-6">
-        <div className="mx-auto max-w-2xl space-y-6">
-          {/* ── Status management (first — for immediate visibility) ───────── */}
-          <OrderStatusManager
-            orderId={order.id}
-            initialDecisionStatus={order.status}
-            initialTrackingStatus={order.orderStatus}
-            approvalWaUrl={approvalWaUrl}
-            rejectionWaUrl={rejectionWaUrl}
-          />
+        <div className="mx-auto max-w-6xl">
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 items-start">
+            {/* ══ Main column ══════════════════════════════════════════════ */}
+            <div className="flex flex-col gap-6">
+              {/* 1. Status management — first so staff can act immediately */}
+              <OrderStatusManager
+                orderId={order.id}
+                initialDecisionStatus={order.status}
+                initialTrackingStatus={order.orderStatus}
+                approvalWaUrl={approvalWaUrl}
+                rejectionWaUrl={rejectionWaUrl}
+              />
 
-          {/* ── Customer ──────────────────────────────────────────────────── */}
-          <CustomerSection
-            name={order.customerName}
-            whatsapp={order.customerWhatsapp}
-            orderNumber={order.orderNumber}
-          />
+              {/* 2. Order items — operational preparation list */}
+              <OrderItemsCard items={order.items} />
 
-          {/* ── Logistics ─────────────────────────────────────────────────── */}
-          <LogisticsSection
-            fulfillmentType={order.fulfillmentType}
-            deliveryDate={order.deliveryDate}
-            pickupTime={order.pickupTime}
-            pickupAddress={pickupAddress}
-            deliveryCep={order.deliveryCep}
-            deliveryStreet={order.deliveryStreet}
-            deliveryNumber={order.deliveryNumber}
-            deliveryNeighborhood={order.deliveryNeighborhood}
-            deliveryCity={order.deliveryCity}
-            shippingAddress={order.shippingAddress}
-          />
+              {/* 3. Customer notes — highlighted only when present */}
+              {order.notes && <OrderNotesCard notes={order.notes} />}
+            </div>
 
-          {/* ── Items ─────────────────────────────────────────────────────── */}
-          <ItemsSection items={order.items} />
+            {/* ══ Sidebar ══════════════════════════════════════════════════ */}
+            <div className="flex flex-col gap-6">
+              {/* 4. Customer info + WhatsApp */}
+              <CustomerInfoCard
+                name={order.customerName}
+                whatsapp={order.customerWhatsapp}
+                orderNumber={order.orderNumber}
+              />
 
-          {/* ── Customer notes ────────────────────────────────────────────── */}
-          {order.notes && (
-            <section
-              aria-label="Observações do cliente"
-              className="rounded-xl border border-line bg-amber-50 px-4 py-4"
-            >
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-amber-700">
-                Observações do cliente
-              </p>
-              <p className="text-sm text-amber-900 whitespace-pre-line leading-relaxed">
-                {order.notes}
-              </p>
-            </section>
-          )}
+              {/* 5. Logistics — delivery vs pickup details */}
+              <LogisticsCard
+                fulfillmentType={order.fulfillmentType}
+                deliveryDate={order.deliveryDate}
+                pickupTime={order.pickupTime}
+                pickupAddress={pickupAddress}
+                deliveryCep={order.deliveryCep}
+                deliveryStreet={order.deliveryStreet}
+                deliveryNumber={order.deliveryNumber}
+                deliveryNeighborhood={order.deliveryNeighborhood}
+                deliveryCity={order.deliveryCity}
+                shippingAddress={order.shippingAddress}
+              />
+
+              {/* 6. Financial summary — subtotal, delivery fee, total */}
+              <FinancialSummaryCard
+                items={order.items}
+                deliveryFee={order.deliveryFee}
+                fulfillmentType={order.fulfillmentType}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  );
-}
-
-// ─── Icon ─────────────────────────────────────────────────────────────────────
-
-function ArrowLeftIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <line x1="19" y1="12" x2="5" y2="12" />
-      <polyline points="12 19 5 12 12 5" />
-    </svg>
   );
 }
