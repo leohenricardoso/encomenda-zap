@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const catalog = await getStoreCatalogUseCase.execute(storeSlug);
     return {
       title: catalog.name,
-      description: `Conheça o cardápio digital de ${catalog.name}. Veja produtos, preços e faça seu pedido pelo WhatsApp.`,
+      description: `Conheça o cardápio digital de ${catalog.name}. Veja produtos, preços e faça seu pedido.`,
       openGraph: {
         title: `${catalog.name} — Cardápio Digital`,
         description: `Explore os produtos de ${catalog.name} e faça seu pedido facilmente.`,

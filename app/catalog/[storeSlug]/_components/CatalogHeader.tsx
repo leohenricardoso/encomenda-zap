@@ -34,7 +34,7 @@ export function CatalogHeader({
                 {storeName}
               </h1>
               <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
-                Cardápio digital · Faça seu pedido pelo WhatsApp
+                Cardápio digital · Faça seu pedido
               </p>
             </div>
 
