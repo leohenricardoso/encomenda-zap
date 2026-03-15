@@ -6,17 +6,28 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── StoreStatus ─────────────────────────────────────────────────────────────
+// Lifecycle status of a store managed by the super admin.
+
+enum StoreStatus {
+  ACTIVE     // fully operational
+  INACTIVE   // disabled by super admin
+  SUSPENDED  // suspended (e.g. non-payment)
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 // Represents a business (tenant) using the platform.
 // Each Store will own its products, orders and customers.
 
 model Store {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   name      String
   /// URL-safe identifier used in the public catalog: /catalog/:slug
-  slug      String?  @unique
+  slug      String?     @unique
   whatsapp  String
-  isActive  Boolean  @default(true)
+  /// Lifecycle status managed by platform super admin.
+  status    StoreStatus @default(ACTIVE)
+  isActive  Boolean     @default(true)
   /// Default delivery fee applied when no CEP ranges are configured (unrestricted delivery).
   defaultDeliveryFee Decimal @default(0) @db.Decimal(10, 2)
   /// Minimum number of days in advance customers must place orders.
@@ -45,9 +56,26 @@ model Store {
   messageConfig StoreMessageConfig?
 
   @@index([slug])
+  @@index([status])
   @@map("stores")
 }
 
+
+// ─── SuperAdmin ──────────────────────────────────────────────────────────────
+// Platform-level administrator. Not bound to any store.
+// Manages stores, users, and platform health.
+
+model SuperAdmin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("super_admins")
+}
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 // Store owner — the authenticated user of the platform.

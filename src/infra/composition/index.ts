@@ -31,6 +31,7 @@
 import { Argon2PasswordHasher } from "@/infra/security/Argon2PasswordHasher";
 import { PrismaAdminRepository } from "@/infra/repositories/PrismaAdminRepository";
 import { PrismaStoreRepository } from "@/infra/repositories/PrismaStoreRepository";
+import { PrismaSuperAdminRepository } from "@/infra/repositories/PrismaSuperAdminRepository";
 import { PrismaProductRepository } from "@/infra/repositories/PrismaProductRepository";
 import { PrismaCatalogRepository } from "@/infra/repositories/PrismaCatalogRepository";
 import { PrismaCustomerRepository } from "@/infra/repositories/PrismaCustomerRepository";
@@ -48,6 +49,12 @@ import { PrismaProductCategoryRepository } from "@/infra/repositories/PrismaProd
 
 import { LoginUseCase } from "@/application/auth/LoginUseCase";
 import { RegisterStoreUseCase } from "@/application/store/RegisterStoreUseCase";
+import { LoginSuperAdminUseCase } from "@/application/superAdmin/LoginSuperAdminUseCase";
+import { ListAllStoresUseCase } from "@/application/store/ListAllStoresUseCase";
+import { GetStoreDetailUseCase } from "@/application/store/GetStoreDetailUseCase";
+import { CreateStoreBySuperAdminUseCase } from "@/application/store/CreateStoreBySuperAdminUseCase";
+import { UpdateStoreInfoUseCase } from "@/application/store/UpdateStoreInfoUseCase";
+import { SetStoreStatusUseCase } from "@/application/store/SetStoreStatusUseCase";
 import { CreateProductUseCase } from "@/application/product/CreateProductUseCase";
 import { ListProductsUseCase } from "@/application/product/ListProductsUseCase";
 import { GetProductByIdUseCase } from "@/application/product/GetProductByIdUseCase";
@@ -98,6 +105,8 @@ import { GetCategoryProductsUseCase } from "@/application/category/GetCategoryPr
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 import { AuthController } from "@/controllers/http/AuthController";
+import { SuperAdminAuthController } from "@/controllers/http/SuperAdminAuthController";
+import { AdminStoreController } from "@/controllers/http/AdminStoreController";
 import { ProductController } from "@/controllers/http/ProductController";
 import { ProductVariantController } from "@/controllers/http/ProductVariantController";
 import { PlaceOrderController } from "@/controllers/http/PlaceOrderController";
@@ -115,6 +124,7 @@ import { CategoryController } from "@/controllers/http/CategoryController";
 const hasher = new Argon2PasswordHasher();
 const adminRepo = new PrismaAdminRepository();
 const storeRepo = new PrismaStoreRepository();
+const superAdminRepo = new PrismaSuperAdminRepository();
 const productRepo = new PrismaProductRepository();
 const catalogRepo = new PrismaCatalogRepository();
 const customerRepo = new PrismaCustomerRepository();
@@ -129,6 +139,20 @@ const productCategoryRepo = new PrismaProductCategoryRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
+
+// ─── Super Admin ──────────────────────────────────────────────────────────────
+const loginSuperAdminUseCase = new LoginSuperAdminUseCase(
+  superAdminRepo,
+  hasher,
+);
+const listAllStoresUseCase = new ListAllStoresUseCase(storeRepo);
+const getStoreDetailUseCase = new GetStoreDetailUseCase(storeRepo);
+const createStoreBySuperAdminUseCase = new CreateStoreBySuperAdminUseCase(
+  storeRepo,
+  hasher,
+);
+const updateStoreInfoUseCase = new UpdateStoreInfoUseCase(storeRepo);
+const setStoreStatusUseCase = new SetStoreStatusUseCase(storeRepo);
 
 const createProductUseCase = new CreateProductUseCase(
   productRepo,
@@ -151,6 +175,21 @@ export const authController = new AuthController(
   loginUseCase,
   registerStoreUseCase,
 );
+
+export const superAdminAuthController = new SuperAdminAuthController(
+  loginSuperAdminUseCase,
+);
+
+export const adminStoreController = new AdminStoreController(
+  listAllStoresUseCase,
+  getStoreDetailUseCase,
+  createStoreBySuperAdminUseCase,
+  updateStoreInfoUseCase,
+  setStoreStatusUseCase,
+);
+
+// Export use cases for direct use in Server Components
+export { listAllStoresUseCase, getStoreDetailUseCase };
 
 export const productController = new ProductController(
   createProductUseCase,

@@ -23,8 +23,9 @@ import type {
  * Multi-tenancy is guaranteed implicitly: we look up the Store by slug,
  * then only load Products belonging to that Store via the relation.
  *
- * Active-only filtering happens at the database level (WHERE isActive = true)
- * for both Products and their Variants.
+ * Active-only filtering happens at the database level (WHERE isActive = true
+ * AND status = 'ACTIVE') for the Store, and (WHERE isActive = true) for
+ * Products and their Variants.
  */
 export class PrismaCatalogRepository implements ICatalogRepository {
   async findBySlug(
@@ -33,7 +34,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
   ): Promise<StoreCatalog | null> {
     // ── 1. Store info + categories (no products here) ─────────────────────
     const store = await prisma.store.findFirst({
-      where: { slug, isActive: true },
+      where: { slug, isActive: true, status: "ACTIVE" },
       select: {
         id: true,
         name: true,

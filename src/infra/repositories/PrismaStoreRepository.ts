@@ -3,10 +3,16 @@ import { prisma } from "@/infra/prisma";
 import type {
   IStoreRepository,
   CreateStoreWithAdminInput,
+  CreateStoreForAdminInput,
 } from "@/domain/store/IStoreRepository";
 import type {
   CreateStoreOutput,
   StorePickupAddress,
+  StoreStatus,
+  ListStoresFilter,
+  UpdateStoreInfoInput,
+  StoreWithDetails,
+  PaginatedStores,
 } from "@/domain/store/types";
 import { AppError } from "@/shared/errors/AppError";
 import { HttpStatus } from "@/shared/http/statuses";
@@ -156,6 +162,160 @@ export class PrismaStoreRepository implements IStoreRepository {
     await prisma.store.update({
       where: { id: storeId },
       data: { minimumAdvanceDays: days },
+    });
+  }
+
+  // ─── Super-admin-scoped methods ───────────────────────────────────────────────
+
+  async listAll(filters: ListStoresFilter): Promise<PaginatedStores> {
+    const page = Math.max(1, filters.page ?? 1);
+    const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.StoreWhereInput = {};
+    if (filters.status) where.status = filters.status;
+    if (filters.search) {
+      where.name = { contains: filters.search, mode: "insensitive" };
+    }
+
+    const [rows, total] = await Promise.all([
+      prisma.store.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          whatsapp: true,
+          status: true,
+          isActive: true,
+          createdAt: true,
+          admin: { select: { email: true } },
+        },
+      }),
+      prisma.store.count({ where }),
+    ]);
+
+    return {
+      stores: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        slug: r.slug,
+        whatsapp: r.whatsapp,
+        status: r.status as StoreStatus,
+        isActive: r.isActive,
+        createdAt: r.createdAt,
+        adminEmail: r.admin?.email ?? null,
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async findStoreById(id: string): Promise<StoreWithDetails | null> {
+    const row = await prisma.store.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        whatsapp: true,
+        status: true,
+        isActive: true,
+        createdAt: true,
+        admin: { select: { email: true } },
+      },
+    });
+    if (!row) return null;
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      whatsapp: row.whatsapp,
+      status: row.status as StoreStatus,
+      isActive: row.isActive,
+      createdAt: row.createdAt,
+      adminEmail: row.admin?.email ?? null,
+    };
+  }
+
+  async createStore(
+    input: CreateStoreForAdminInput,
+  ): Promise<StoreWithDetails> {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const store = await tx.store.create({
+          data: {
+            name: input.name,
+            slug: input.slug,
+            whatsapp: input.whatsapp,
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            whatsapp: true,
+            status: true,
+            isActive: true,
+            createdAt: true,
+          },
+        });
+
+        let adminEmail: string | null = null;
+        if (input.adminEmail && input.passwordHash) {
+          await tx.admin.create({
+            data: {
+              email: input.adminEmail,
+              passwordHash: input.passwordHash,
+              storeId: store.id,
+            },
+          });
+          adminEmail = input.adminEmail;
+        }
+
+        return {
+          ...store,
+          status: store.status as StoreStatus,
+          adminEmail,
+        };
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new AppError(
+          "A store or admin with those details already exists.",
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw err;
+    }
+  }
+
+  async updateStoreInfo(
+    id: string,
+    input: UpdateStoreInfoInput,
+  ): Promise<void> {
+    const data: Prisma.StoreUpdateInput = {};
+    if (input.name !== undefined) data.name = input.name;
+    if (input.slug !== undefined) data.slug = input.slug;
+    if (input.whatsapp !== undefined) data.whatsapp = input.whatsapp;
+
+    await prisma.store.update({ where: { id }, data });
+  }
+
+  async updateStoreStatus(id: string, status: StoreStatus): Promise<void> {
+    await prisma.store.update({
+      where: { id },
+      data: {
+        status,
+        // Keep isActive in sync for backward compatibility with catalog queries
+        isActive: status === "ACTIVE",
+      },
     });
   }
 }

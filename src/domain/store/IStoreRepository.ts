@@ -1,4 +1,22 @@
-import type { CreateStoreOutput, StorePickupAddress } from "./types";
+import type {
+  CreateStoreOutput,
+  StorePickupAddress,
+  StoreStatus,
+  ListStoresFilter,
+  UpdateStoreInfoInput,
+  StoreWithDetails,
+  PaginatedStores,
+} from "./types";
+
+export interface CreateStoreForAdminInput {
+  name: string;
+  slug: string;
+  whatsapp: string;
+  /** If provided, creates an admin account for the store owner. */
+  adminEmail?: string;
+  /** Pre-hashed password. Required when adminEmail is provided. */
+  passwordHash?: string;
+}
 
 /**
  * Repository interface for Store persistence.
@@ -17,6 +35,13 @@ export interface CreateStoreWithAdminInput {
 }
 
 export type { CreateStoreOutput };
+export type {
+  StoreStatus,
+  ListStoresFilter,
+  UpdateStoreInfoInput,
+  StoreWithDetails,
+  PaginatedStores,
+};
 
 export interface IStoreRepository {
   /**
@@ -53,4 +78,36 @@ export interface IStoreRepository {
 
   /** Persists the store's minimum advance days setting. */
   updateMinimumAdvanceDays(storeId: string, days: number): Promise<void>;
+
+  // ─── Super-admin-scoped methods (not tenant-isolated) ────────────────────────
+
+  /**
+   * Returns paginated list of ALL stores across all tenants.
+   * MUST only be called from super-admin-authenticated code paths.
+   */
+  listAll(filters: ListStoresFilter): Promise<PaginatedStores>;
+
+  /**
+   * Returns full details for any store by ID, unscoped by tenant.
+   * MUST only be called from super-admin-authenticated code paths.
+   */
+  findStoreById(id: string): Promise<StoreWithDetails | null>;
+
+  /**
+   * Creates a new store with optional admin credentials.
+   * Called by super admin to provision stores without self-registration.
+   */
+  createStore(input: CreateStoreForAdminInput): Promise<StoreWithDetails>;
+
+  /**
+   * Updates editable store info. storeId is the target tenant's ID.
+   * MUST only be called from super-admin-authenticated code paths.
+   */
+  updateStoreInfo(id: string, input: UpdateStoreInfoInput): Promise<void>;
+
+  /**
+   * Updates the store's lifecycle status.
+   * MUST only be called from super-admin-authenticated code paths.
+   */
+  updateStoreStatus(id: string, status: StoreStatus): Promise<void>;
 }
