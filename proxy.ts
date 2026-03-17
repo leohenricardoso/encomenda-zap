@@ -36,7 +36,7 @@ function isAdminProtected(pathname: string): boolean {
   );
 }
 
-export async function middleware(req: NextRequest): Promise<NextResponse> {
+export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
   // ── Super Admin routes ────────────────────────────────────────────────────
