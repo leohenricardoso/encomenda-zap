@@ -42,12 +42,14 @@ export function NewProductImagePicker({ files, onChange }: Props) {
   // useMemo so there is never a render where files[i] has no matching URL.
   // A single unmount-only effect handles the final cleanup.
   const urlCacheRef = useRef(new Map<File, string>());
+  const idCacheRef = useRef(new Map<File, string>());
 
   useEffect(() => {
     // Only revoke all URLs on unmount — no cleanup between renders.
     return () => {
       for (const url of urlCacheRef.current.values()) URL.revokeObjectURL(url);
       urlCacheRef.current.clear();
+      idCacheRef.current.clear();
     };
   }, []);
 
@@ -72,6 +74,7 @@ export function NewProductImagePicker({ files, onChange }: Props) {
       if (!fileSet.has(file)) {
         URL.revokeObjectURL(url);
         cache.delete(file);
+        idCacheRef.current.delete(file);
       }
     }
 
@@ -79,6 +82,10 @@ export function NewProductImagePicker({ files, onChange }: Props) {
     for (const file of files) {
       if (!cache.has(file)) {
         cache.set(file, URL.createObjectURL(file));
+        idCacheRef.current.set(
+          file,
+          `f-${Math.random().toString(36).slice(2, 9)}`,
+        );
       }
     }
 
@@ -92,7 +99,7 @@ export function NewProductImagePicker({ files, onChange }: Props) {
       const pos = (i + 1) as Position;
       result[pos] = {
         kind: "uploaded",
-        id: `pending-${i}`,
+        id: idCacheRef.current.get(files[i])!,
         imageUrl: cache.get(files[i])!,
       };
     }
@@ -171,18 +178,22 @@ export function NewProductImagePicker({ files, onChange }: Props) {
 
       {/* 3-slot grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {POSITIONS.map((pos) => (
-          <ImageSlot
-            key={pos}
-            position={pos}
-            state={slots[pos]}
-            isPrimary={pos === 1}
-            disabled={false}
-            onFileSelected={handleFileSelected}
-            onRemove={() => handleRemove(pos)}
-            onSetPrimary={() => handleSetPrimary(pos)}
-          />
-        ))}
+        {POSITIONS.map((pos) => {
+          const slot = slots[pos];
+          const stableKey = slot.kind === "uploaded" ? slot.id : `empty-${pos}`;
+          return (
+            <ImageSlot
+              key={stableKey}
+              position={pos}
+              state={slot}
+              isPrimary={pos === 1}
+              disabled={false}
+              onFileSelected={handleFileSelected}
+              onRemove={() => handleRemove(pos)}
+              onSetPrimary={() => handleSetPrimary(pos)}
+            />
+          );
+        })}
       </div>
 
       {/* Toast notification */}

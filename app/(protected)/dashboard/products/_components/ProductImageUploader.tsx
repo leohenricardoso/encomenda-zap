@@ -337,18 +337,25 @@ export function ProductImageUploader({ productId, initialImages }: Props) {
 
       {/* 3-slot grid — 1 col mobile, 2 col tablet, 3 col desktop */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {POSITIONS.map((pos) => (
-          <ImageSlot
-            key={pos}
-            position={pos}
-            state={slots[pos]}
-            isPrimary={pos === 1}
-            disabled={isBusy}
-            onFileSelected={handleFileSelected}
-            onRemove={() => void handleRemove(pos)}
-            onSetPrimary={() => void handleSetPrimary(pos)}
-          />
-        ))}
+        {POSITIONS.map((pos) => {
+          const slot = slots[pos];
+          const stableKey =
+            slot.kind === "uploaded" || slot.kind === "deleting"
+              ? slot.id
+              : `${slot.kind}-${pos}`;
+          return (
+            <ImageSlot
+              key={stableKey}
+              position={pos}
+              state={slot}
+              isPrimary={pos === 1}
+              disabled={isBusy}
+              onFileSelected={handleFileSelected}
+              onRemove={() => void handleRemove(pos)}
+              onSetPrimary={() => void handleSetPrimary(pos)}
+            />
+          );
+        })}
       </div>
 
       {/* Toast notification */}

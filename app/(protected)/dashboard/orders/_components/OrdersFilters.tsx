@@ -40,7 +40,7 @@ const DATE_PRESETS: { key: DatePreset; label: string }[] = [
 // ─── Status options ───────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS: { value: OrderStatus | ""; label: string }[] = [
-  { value: "", label: "Todos os status" },
+  { value: "", label: "Pendentes + Aceitas" },
   ...Object.values(OrderStatus).map((s) => ({
     value: s,
     label: STATUS_CONFIG[s].label,
@@ -127,7 +127,7 @@ export function OrdersFilters() {
 
   const presetBase =
     "px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-accent/40";
-  const presetActive = "bg-accent text-accent-foreground border-accent";
+  const presetActive = "text-accent-foreground border-accent";
   const presetInactive =
     "bg-surface text-foreground-muted border-line hover:bg-surface-hover";
 

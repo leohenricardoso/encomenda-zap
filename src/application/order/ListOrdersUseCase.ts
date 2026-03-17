@@ -1,5 +1,6 @@
 import type { IOrderRepository } from "@/domain/order/IOrderRepository";
 import type { OrderWithDetails, OrderFilters } from "@/domain/order/Order";
+import { OrderStatus } from "@/domain/order/Order";
 
 /**
  * ListOrdersUseCase
@@ -17,6 +18,13 @@ export class ListOrdersUseCase {
     storeId: string,
     filters?: OrderFilters,
   ): Promise<OrderWithDetails[]> {
-    return this.repo.findAllByStoreWithDetails(storeId, filters);
+    const effectiveFilters: OrderFilters = {
+      ...filters,
+      status:
+        filters?.status !== undefined
+          ? filters.status
+          : [OrderStatus.PENDING, OrderStatus.APPROVED],
+    };
+    return this.repo.findAllByStoreWithDetails(storeId, effectiveFilters);
   }
 }
