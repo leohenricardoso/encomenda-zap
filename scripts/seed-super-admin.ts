@@ -12,7 +12,9 @@
  *   npx tsx scripts/seed-super-admin.ts --email admin@example.com --password changeme
  */
 
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+config(); // fallback to .env
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import argon2 from "argon2";

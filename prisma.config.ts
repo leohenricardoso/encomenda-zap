@@ -1,4 +1,7 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" }); // Neon (local override)
+config(); // fallback: Docker local (.env)
+
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
