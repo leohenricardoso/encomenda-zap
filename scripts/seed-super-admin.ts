@@ -69,7 +69,7 @@ async function main() {
 
   const superAdmin = await prisma.superAdmin.create({
     data: {
-      email,
+      email: email!,
       passwordHash,
       name: name ?? null,
       isActive: true,
