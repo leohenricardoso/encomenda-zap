@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useTransition } from "react";
+import { useCallback, useTransition, useState } from "react";
+import { Button } from "../../../../_components/Button";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -18,36 +19,47 @@ export function CustomersFilters() {
   const params = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const search = params.get("search") ?? "";
-  const minOrders = params.get("min_orders") ?? "";
-  const minSpent = params.get("min_spent") ?? "";
+  // Applied values from URL
+  const appliedSearch = params.get("search") ?? "";
+  const appliedMinOrders = params.get("min_orders") ?? "";
+  const appliedMinSpent = params.get("min_spent") ?? "";
 
-  const hasFilters = search !== "" || minOrders !== "" || minSpent !== "";
+  // ── Draft state (local form values, not yet applied) ──────────────────────
+  const [draftSearch, setDraftSearch] = useState(appliedSearch);
+  const [draftMinOrders, setDraftMinOrders] = useState(appliedMinOrders);
+  const [draftMinSpent, setDraftMinSpent] = useState(appliedMinSpent);
 
-  // Build a new URLSearchParams, reset page to 1, then push.
-  const push = useCallback(
-    (updates: Record<string, string>) => {
-      const next = new URLSearchParams(params.toString());
-      for (const [k, v] of Object.entries(updates)) {
-        if (v === "") {
-          next.delete(k);
-        } else {
-          next.set(k, v);
-        }
-      }
-      next.delete("page"); // always reset to first page on filter change
-      startTransition(() => {
-        router.push(`?${next.toString()}`);
-      });
-    },
-    [router, params],
-  );
+  const hasFilters =
+    appliedSearch !== "" || appliedMinOrders !== "" || appliedMinSpent !== "";
 
-  const handleClear = () => {
+  // ── Apply all drafts to the URL at once ───────────────────────────────────
+
+  const applyFilters = useCallback(() => {
+    const next = new URLSearchParams(params.toString());
+    if (draftSearch.trim()) next.set("search", draftSearch.trim());
+    else next.delete("search");
+    if (draftMinOrders) next.set("min_orders", draftMinOrders);
+    else next.delete("min_orders");
+    if (draftMinSpent) next.set("min_spent", draftMinSpent);
+    else next.delete("min_spent");
+    next.delete("page");
+    startTransition(() => {
+      router.push(`?${next.toString()}`);
+    });
+  }, [draftSearch, draftMinOrders, draftMinSpent, params, router]);
+
+  function handleClear() {
+    setDraftSearch("");
+    setDraftMinOrders("");
+    setDraftMinSpent("");
     startTransition(() => {
       router.push("?");
     });
-  };
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") applyFilters();
+  }
 
   return (
     <div
@@ -58,7 +70,7 @@ export function CustomersFilters() {
     >
       <div className="flex flex-wrap items-end gap-3">
         {/* Search */}
-        <div className="min-w-[200px] flex-1">
+        <div className="min-w-50 flex-1">
           <label
             htmlFor="cf-search"
             className="mb-1 block text-xs font-medium text-foreground-muted"
@@ -68,9 +80,10 @@ export function CustomersFilters() {
           <input
             id="cf-search"
             type="text"
-            value={search}
+            value={draftSearch}
             placeholder="Nome ou telefone…"
-            onChange={(e) => push({ search: e.target.value })}
+            onChange={(e) => setDraftSearch(e.target.value)}
+            onKeyDown={handleKeyDown}
             className={[
               "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm",
               "text-foreground placeholder:text-foreground-muted",
@@ -92,9 +105,10 @@ export function CustomersFilters() {
             type="number"
             min={1}
             step={1}
-            value={minOrders}
+            value={draftMinOrders}
             placeholder="Ex: 2"
-            onChange={(e) => push({ min_orders: e.target.value })}
+            onChange={(e) => setDraftMinOrders(e.target.value)}
+            onKeyDown={handleKeyDown}
             className={[
               "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm",
               "text-foreground placeholder:text-foreground-muted",
@@ -116,9 +130,10 @@ export function CustomersFilters() {
             type="number"
             min={0}
             step={0.01}
-            value={minSpent}
+            value={draftMinSpent}
             placeholder="Ex: 100"
-            onChange={(e) => push({ min_spent: e.target.value })}
+            onChange={(e) => setDraftMinSpent(e.target.value)}
+            onKeyDown={handleKeyDown}
             className={[
               "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm",
               "text-foreground placeholder:text-foreground-muted",
@@ -127,19 +142,24 @@ export function CustomersFilters() {
           />
         </div>
 
-        {/* Clear */}
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className={[
-              "rounded-lg border border-line bg-surface-hover px-4 py-2",
-              "text-sm text-foreground-muted transition-opacity hover:opacity-80",
-            ].join(" ")}
-          >
-            Limpar filtros
-          </button>
-        )}
+        {/* Actions */}
+        <div className="flex items-center gap-2 self-end">
+          <Button type="button" size="sm" onClick={applyFilters}>
+            Filtrar
+          </Button>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className={[
+                "rounded-lg border border-line bg-surface-hover px-4 py-2",
+                "text-sm text-foreground-muted transition-opacity hover:opacity-80",
+              ].join(" ")}
+            >
+              Limpar filtros
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
