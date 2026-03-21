@@ -9,4 +9,5 @@ export interface Admin {
   email: string;
   passwordHash: string;
   storeId: string;
+  storeStatus: string;
 }

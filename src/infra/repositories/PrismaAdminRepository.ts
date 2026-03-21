@@ -14,14 +14,25 @@ import type { Admin } from "@/domain/auth/Admin";
  */
 export class PrismaAdminRepository implements IAdminRepository {
   async findByEmail(email: string): Promise<Admin | null> {
-    return prisma.admin.findUnique({
+    const row = await prisma.admin.findUnique({
       where: { email },
       select: {
         id: true,
         email: true,
         passwordHash: true,
         storeId: true,
+        store: { select: { status: true } },
       },
     });
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      email: row.email,
+      passwordHash: row.passwordHash,
+      storeId: row.storeId,
+      storeStatus: row.store.status,
+    };
   }
 }

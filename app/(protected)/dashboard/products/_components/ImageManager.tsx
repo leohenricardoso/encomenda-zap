@@ -204,7 +204,8 @@ export function ImageManager({ productId, initialImages }: Props) {
           return;
         }
 
-        setImages((prev) => prev.filter((img) => img.id !== imageId));
+        const remaining = (await res.json()) as ProductImage[];
+        setImages(remaining);
       } catch {
         setError("Erro de conexão. Tente novamente.");
       }

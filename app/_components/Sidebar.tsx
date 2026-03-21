@@ -15,7 +15,7 @@
 
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { NavItem } from "./NavItem";
 import { NavGroup } from "./NavGroup";
@@ -180,6 +180,12 @@ function BrandMark() {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+  }
 
   // Auto-close mobile drawer on route change
   useEffect(() => {
@@ -291,7 +297,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-line px-4 py-3">
+        <div className="shrink-0 border-t border-line px-4 py-3 space-y-3">
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-[rgb(var(--color-bg-muted))] hover:text-foreground transition-colors"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-5 w-5 shrink-0"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15"
+              />
+            </svg>
+            Sair
+          </button>
           <p className="text-[11px] font-medium tracking-wide text-foreground-muted/70 uppercase">
             © {new Date().getFullYear()} Encomenda Zap
           </p>

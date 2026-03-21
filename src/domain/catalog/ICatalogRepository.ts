@@ -11,9 +11,8 @@ export interface ICatalogRepository {
    * Looks up a store by its URL slug and returns its public catalog.
    * When categorySlug is provided, only products in that category are returned.
    *
-   * Returns null when:
-   *  - No store exists with the given slug
-   *  - The store is inactive (isActive = false)
+   * Returns null when no store exists with the given slug.
+   * Throws AppError(FORBIDDEN) when the store exists but is inactive/suspended.
    *
    * Products are returned ordered by name ascending; variants by sortOrder.
    * Only active products and active variants are included.

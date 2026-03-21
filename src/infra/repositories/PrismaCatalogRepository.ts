@@ -1,4 +1,6 @@
 import { prisma } from "@/infra/prisma";
+import { AppError } from "@/shared/errors/AppError";
+import { HttpStatus } from "@/shared/http/statuses";
 import type { ICatalogRepository } from "@/domain/catalog/ICatalogRepository";
 import type {
   StoreCatalog,
@@ -57,7 +59,20 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       },
     });
 
-    if (!store || !store.slug) return null;
+    if (!store || !store.slug) {
+      // Check if the store exists but is simply not ACTIVE
+      const exists = await prisma.store.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+      if (exists) {
+        throw new AppError(
+          "Esta loja está indisponível no momento.",
+          HttpStatus.FORBIDDEN,
+        );
+      }
+      return null;
+    }
 
     // ── 2. Products ───────────────────────────────────────────────────────
     // When a category filter is active, query via ProductCategory to preserve

@@ -9,15 +9,17 @@ import {
 import type { ListPickupSlotsUseCase } from "@/application/pickupSlot/ListPickupSlotsUseCase";
 import type { CreatePickupSlotUseCase } from "@/application/pickupSlot/CreatePickupSlotUseCase";
 import type { TogglePickupSlotUseCase } from "@/application/pickupSlot/TogglePickupSlotUseCase";
+import type { DeletePickupSlotUseCase } from "@/application/pickupSlot/DeletePickupSlotUseCase";
 import type { GetPublicPickupSlotsUseCase } from "@/application/pickupSlot/GetPublicPickupSlotsUseCase";
 
 /**
  * StorePickupSlotController — HTTP adapter for pickup-slot management.
  *
  * Admin routes (authenticated, storeId from session):
- *   GET  /api/pickup-slots                — list all slots (optionally filter by ?dayOfWeek=)
- *   POST /api/pickup-slots                — create a new slot
- *   PATCH /api/pickup-slots/:id           — activate / deactivate
+ *   GET    /api/pickup-slots                — list all slots (optionally filter by ?dayOfWeek=)
+ *   POST   /api/pickup-slots                — create a new slot
+ *   PATCH  /api/pickup-slots/:id           — activate / deactivate
+ *   DELETE /api/pickup-slots/:id           — permanently remove
  *
  * Public route (unauthenticated, storeId resolved from storeSlug):
  *   GET  /api/catalog/:storeSlug/pickup-slots  — active slots for customer flow
@@ -28,6 +30,7 @@ export class StorePickupSlotController {
     private readonly listSlotsUseCase: ListPickupSlotsUseCase,
     private readonly createSlotUseCase: CreatePickupSlotUseCase,
     private readonly toggleSlotUseCase: TogglePickupSlotUseCase,
+    private readonly deleteSlotUseCase: DeletePickupSlotUseCase,
     private readonly getPublicSlotsUseCase: GetPublicPickupSlotsUseCase,
   ) {}
 
@@ -115,6 +118,27 @@ export class StorePickupSlotController {
           isActive: body.isActive,
         });
         return ok(slot);
+      } catch (err) {
+        return errorResponse(
+          err instanceof AppError ? err : new AppError("Unexpected error."),
+        );
+      }
+    },
+  );
+
+  // ─── DELETE /api/pickup-slots/:id ────────────────────────────────────────────
+
+  readonly delete = withAuth(
+    async (
+      req: AuthenticatedRequest,
+      ...args: unknown[]
+    ): Promise<NextResponse> => {
+      const ctx = (args[0] ?? {}) as { params: Promise<{ id: string }> };
+      const { id } = await ctx.params;
+
+      try {
+        await this.deleteSlotUseCase.execute(id, req.session.storeId);
+        return ok(null);
       } catch (err) {
         return errorResponse(
           err instanceof AppError ? err : new AppError("Unexpected error."),

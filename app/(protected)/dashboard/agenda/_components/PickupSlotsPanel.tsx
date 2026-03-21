@@ -8,9 +8,10 @@
  * existing ones active/inactive.
  *
  * API contract:
- *   GET  /api/pickup-slots              → { success: true, data: { slots: StorePickupSlot[] } }
- *   POST /api/pickup-slots              → { success: true, data: StorePickupSlot }
- *   PATCH /api/pickup-slots/:id         → { success: true, data: StorePickupSlot }
+ *   GET    /api/pickup-slots              → { success: true, data: { slots: StorePickupSlot[] } }
+ *   POST   /api/pickup-slots              → { success: true, data: StorePickupSlot }
+ *   PATCH  /api/pickup-slots/:id         → { success: true, data: StorePickupSlot }
+ *   DELETE /api/pickup-slots/:id         → { success: true, data: null }
  */
 
 import { useState } from "react";
@@ -79,6 +80,17 @@ export function PickupSlotsPanel({ initialSlots }: PickupSlotsPanelProps) {
     });
   }
 
+  function handleRemove(dayOfWeek: number, id: string) {
+    setSlotsByDay((prev) => {
+      const copy = new Map(prev);
+      copy.set(
+        dayOfWeek,
+        (copy.get(dayOfWeek) ?? []).filter((s) => s.id !== id),
+      );
+      return copy;
+    });
+  }
+
   return (
     <section className="space-y-4">
       {/* ── Section header ──────────────────────────────────────────────── */}
@@ -102,6 +114,7 @@ export function PickupSlotsPanel({ initialSlots }: PickupSlotsPanelProps) {
             slots={slotsByDay.get(i) ?? []}
             onToggle={(updated) => handleToggle(i, updated)}
             onAdd={(added) => handleAdd(i, added)}
+            onRemove={(id) => handleRemove(i, id)}
           />
         ))}
       </div>
@@ -117,6 +130,7 @@ interface DayPanelProps {
   slots: StorePickupSlot[];
   onToggle: (updated: StorePickupSlot) => void;
   onAdd: (added: StorePickupSlot) => void;
+  onRemove: (id: string) => void;
 }
 
 function DayPanel({
@@ -125,6 +139,7 @@ function DayPanel({
   slots,
   onToggle,
   onAdd,
+  onRemove,
 }: DayPanelProps) {
   const [open, setOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -176,7 +191,12 @@ function DayPanel({
           ) : (
             <ul className="space-y-2">
               {slots.map((slot) => (
-                <SlotRow key={slot.id} slot={slot} onToggle={onToggle} />
+                <SlotRow
+                  key={slot.id}
+                  slot={slot}
+                  onToggle={onToggle}
+                  onRemove={onRemove}
+                />
               ))}
             </ul>
           )}
@@ -212,9 +232,10 @@ function DayPanel({
 interface SlotRowProps {
   slot: StorePickupSlot;
   onToggle: (updated: StorePickupSlot) => void;
+  onRemove: (id: string) => void;
 }
 
-function SlotRow({ slot, onToggle }: SlotRowProps) {
+function SlotRow({ slot, onToggle, onRemove }: SlotRowProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -244,6 +265,29 @@ function SlotRow({ slot, onToggle }: SlotRowProps) {
     }
   }
 
+  async function handleDelete() {
+    if (!confirm("Remover este horário permanentemente?")) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/pickup-slots/${slot.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onRemove(slot.id);
+      } else {
+        const json = (await res.json().catch(() => ({}))) as {
+          error?: { message: string };
+        };
+        setError(json.error?.message ?? "Erro ao remover.");
+      }
+    } catch {
+      setError("Erro de rede.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <li className="flex flex-col gap-1">
       <div className="flex items-center justify-between rounded-md bg-surface-subtle px-3 py-2">
@@ -263,6 +307,14 @@ function SlotRow({ slot, onToggle }: SlotRowProps) {
           }`}
         >
           {loading ? "..." : slot.isActive ? "Desativar" : "Ativar"}
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={loading}
+          className="rounded-full px-3 py-1 text-xs font-medium text-foreground-muted hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+        >
+          Remover
         </button>
       </div>
       {error && <p className="px-1 text-xs text-danger">{error}</p>}

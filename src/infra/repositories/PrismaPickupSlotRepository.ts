@@ -92,4 +92,11 @@ export class PrismaPickupSlotRepository implements IStorePickupSlotRepository {
       return null;
     }
   }
+
+  async delete(id: string, storeId: string): Promise<boolean> {
+    const result = await prisma.storePickupSlot.deleteMany({
+      where: { id, storeId },
+    });
+    return result.count > 0;
+  }
 }

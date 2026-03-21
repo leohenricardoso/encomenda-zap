@@ -74,6 +74,7 @@ import { SetDayAvailabilityUseCase } from "@/application/schedule/SetDayAvailabi
 import { ListPickupSlotsUseCase } from "@/application/pickupSlot/ListPickupSlotsUseCase";
 import { CreatePickupSlotUseCase } from "@/application/pickupSlot/CreatePickupSlotUseCase";
 import { TogglePickupSlotUseCase } from "@/application/pickupSlot/TogglePickupSlotUseCase";
+import { DeletePickupSlotUseCase } from "@/application/pickupSlot/DeletePickupSlotUseCase";
 import { GetPublicPickupSlotsUseCase } from "@/application/pickupSlot/GetPublicPickupSlotsUseCase";
 import { GetCepRangeUseCase } from "@/application/cepRange/GetCepRangeUseCase";
 import { AddCepRangeUseCase } from "@/application/cepRange/UpsertCepRangeUseCase";
@@ -282,6 +283,7 @@ export { getStoreScheduleUseCase };
 const listPickupSlotsUseCase = new ListPickupSlotsUseCase(pickupSlotRepo);
 const createPickupSlotUseCase = new CreatePickupSlotUseCase(pickupSlotRepo);
 const togglePickupSlotUseCase = new TogglePickupSlotUseCase(pickupSlotRepo);
+const deletePickupSlotUseCase = new DeletePickupSlotUseCase(pickupSlotRepo);
 const getPublicPickupSlotsUseCase = new GetPublicPickupSlotsUseCase(
   catalogRepo,
   pickupSlotRepo,
@@ -291,6 +293,7 @@ export const storePickupSlotController = new StorePickupSlotController(
   listPickupSlotsUseCase,
   createPickupSlotUseCase,
   togglePickupSlotUseCase,
+  deletePickupSlotUseCase,
   getPublicPickupSlotsUseCase,
 );
 
