@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import type { ProductImage } from "@/domain/productImage/ProductImage";
 import { NewProductImagePicker } from "./NewProductImagePicker";
+import {
+  EditProductImagePicker,
+  buildInitialSlots,
+  type LocalSlot,
+} from "./EditProductImagePicker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +39,8 @@ interface Props {
   initialValues?: Partial<ProductFormValues & { variants?: VariantRow[] }>;
   /** Pre-selected category IDs (edit mode). */
   initialCategoryIds?: string[];
+  /** Pre-loaded images (edit mode). When provided, edit-mode image picker is shown. */
+  initialImages?: ProductImage[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -54,12 +62,120 @@ const EMPTY_VARIANT: VariantRow = {
   isActive: true,
 };
 
+// ─── Image sync helper (edit mode) ──────────────────────────────────────────
+
+type ServerImg = { id: string; imageUrl: string; position: number };
+
+/**
+ * Reconciles local image state with S3/DB after a successful product update.
+ * Operates best-effort: individual failures are silently ignored so the user
+ * is never left stranded after a successful product save.
+ *
+ * Algorithm:
+ *  1. DELETE images that were removed locally (server repacks positions).
+ *  2. Upload pending files in slot order (lowest slot → lowest available position).
+ *  3. Call PATCH /primary if the intended position-1 image differs from server.
+ */
+async function applyImageChanges(
+  productId: string,
+  slots: LocalSlot[],
+  initialImages: ProductImage[],
+): Promise<void> {
+  // IDs the user wants to keep
+  const keptIds = new Set(
+    slots
+      .filter(
+        (s): s is Extract<LocalSlot, { kind: "existing" }> =>
+          s.kind === "existing",
+      )
+      .map((s) => s.id),
+  );
+
+  const toDelete = initialImages.filter((img) => !keptIds.has(img.id));
+
+  // Track server images so we can compare primary at the end
+  let serverImgs: ServerImg[] = initialImages.map(
+    ({ id, imageUrl, position }) => ({
+      id,
+      imageUrl,
+      position,
+    }),
+  );
+
+  // Step 1 — Delete removed images (server repacks positions after each delete)
+  for (const img of toDelete) {
+    try {
+      const res = await fetch(`/api/products/images/${img.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const body = (await res.json()) as {
+          success: boolean;
+          data: ServerImg[];
+        };
+        serverImgs = body.data;
+      }
+    } catch {
+      // Best-effort — continue to next operation
+    }
+  }
+
+  // Step 2 — Upload new pending files in slot order
+  const uploadedTempToId = new Map<string, string>();
+  for (const slot of slots) {
+    if (slot.kind !== "pending") continue;
+    try {
+      const form = new FormData();
+      form.append("file", slot.file);
+      const res = await fetch(`/api/products/${productId}/images/upload`, {
+        method: "POST",
+        body: form,
+      });
+      if (res.ok) {
+        const body = (await res.json()) as {
+          success: boolean;
+          data: ServerImg;
+        };
+        uploadedTempToId.set(slot.tempId, body.data.id);
+        serverImgs.push(body.data);
+      }
+    } catch {
+      // Best-effort — continue to next operation
+    }
+  }
+
+  // Step 3 — Ensure the intended primary image is at position 1
+  const primarySlot = slots[0];
+  if (!primarySlot || primarySlot.kind === "empty") return;
+
+  let desiredPrimaryId: string | null = null;
+  if (primarySlot.kind === "existing") {
+    desiredPrimaryId = primarySlot.id;
+  } else if (primarySlot.kind === "pending") {
+    desiredPrimaryId = uploadedTempToId.get(primarySlot.tempId) ?? null;
+  }
+
+  if (!desiredPrimaryId) return;
+
+  const serverPrimary = serverImgs.find((img) => img.position === 1);
+  if (serverPrimary && serverPrimary.id !== desiredPrimaryId) {
+    try {
+      await fetch(`/api/products/images/${desiredPrimaryId}/primary`, {
+        method: "PATCH",
+      });
+    } catch {
+      // Best-effort
+    }
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ProductForm({
   productId,
   initialValues,
   initialCategoryIds,
+  initialImages,
 }: Props) {
   const router = useRouter();
   const isEditMode = productId !== undefined;
@@ -81,6 +197,14 @@ export function ProductForm({
 
   /** Files staged for upload in create mode (uploaded after product creation). */
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+
+  /**
+   * Ordered image slots for edit mode.
+   * Initialised from initialImages; mutations are local-only until submit.
+   */
+  const [imageSlots, setImageSlots] = useState<LocalSlot[]>(() =>
+    initialImages ? buildInitialSlots(initialImages) : [],
+  );
 
   /** Available categories fetched on mount. */
   const [availableCategories, setAvailableCategories] = useState<
@@ -261,6 +385,15 @@ export function ProductForm({
         }
       }
 
+      // Edit mode: apply deferred image changes (delete removed, upload new, fix primary)
+      if (isEditMode && initialImages !== undefined) {
+        try {
+          await applyImageChanges(productId!, imageSlots, initialImages);
+        } catch {
+          // Best-effort — product metadata was already saved successfully.
+        }
+      }
+
       router.push("/dashboard/products");
       router.refresh();
     } catch {
@@ -286,13 +419,19 @@ export function ProductForm({
         </div>
       )}
 
-      {/* Image picker — only rendered in create mode */}
-      {!isEditMode && (
+      {/* Image management — edit: deferred local state, create: staged files */}
+      {isEditMode && initialImages !== undefined ? (
+        <EditProductImagePicker
+          initialImages={initialImages}
+          slots={imageSlots}
+          onChange={setImageSlots}
+        />
+      ) : !isEditMode ? (
         <NewProductImagePicker
           files={pendingImages}
           onChange={setPendingImages}
         />
-      )}
+      ) : null}
 
       {/* Name */}
       <div>
