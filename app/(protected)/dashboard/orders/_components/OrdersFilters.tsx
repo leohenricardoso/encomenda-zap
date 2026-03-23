@@ -89,11 +89,18 @@ export function OrdersFilters() {
   // ── Apply all drafts to URL at once ───────────────────────────────────────
 
   function applyFilters() {
-    const next = new URLSearchParams();
+    // Start from current search params so unrelated params (e.g. limit) are preserved
+    const next = new URLSearchParams(searchParams.toString());
     if (draftFrom) next.set("from", draftFrom);
+    else next.delete("from");
     if (draftTo) next.set("to", draftTo);
+    else next.delete("to");
     if (draftStatus) next.set("status", draftStatus);
-    if (draftSearch.trim()) next.set("search", draftSearch.trim());
+    else next.delete("status");
+    const trimmed = draftSearch.trim();
+    if (trimmed) next.set("search", trimmed);
+    else next.delete("search");
+    next.delete("page");
     router.push(`?${next.toString()}`, { scroll: false });
   }
 
@@ -126,7 +133,11 @@ export function OrdersFilters() {
     setDraftTo("");
     setDraftStatus("");
     setDraftSearch("");
-    router.push("?", { scroll: false });
+    // Preserve unrelated params (e.g. limit) — only clear filter + page params
+    const next = new URLSearchParams(searchParams.toString());
+    ["from", "to", "status", "search", "page"].forEach((k) => next.delete(k));
+    const qs = next.toString();
+    router.push(qs ? `?${qs}` : "?", { scroll: false });
   }
 
   // ─── Styles ────────────────────────────────────────────────────────────────

@@ -69,7 +69,7 @@ export default async function CatalogPage({ params }: Props) {
     }
   }
 
-  if (storeInactive || !catalog) {
+  if (storeInactive) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--color-bg-muted))] px-4 text-center">
         <p className="text-4xl">🔒</p>
@@ -82,6 +82,10 @@ export default async function CatalogPage({ params }: Props) {
         </p>
       </div>
     );
+  }
+
+  if (!catalog) {
+    notFound();
   }
 
   return (

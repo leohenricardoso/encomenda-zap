@@ -172,14 +172,16 @@ export function ImageManager({ productId, initialImages }: Props) {
 
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as {
-            error?: string;
+            error?: { message?: string };
           };
-          setError(body.error ?? "Não foi possível adicionar a imagem.");
+          setError(
+            body.error?.message ?? "Não foi possível adicionar a imagem.",
+          );
           return;
         }
 
-        const added = (await res.json()) as ProductImage;
-        setImages((prev) => [...prev, added]);
+        const body = (await res.json()) as { data: ProductImage };
+        setImages((prev) => [...prev, body.data]);
       } catch {
         setError("Erro de conexão. Tente novamente.");
       }
@@ -198,14 +200,14 @@ export function ImageManager({ productId, initialImages }: Props) {
 
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as {
-            error?: string;
+            error?: { message?: string };
           };
-          setError(body.error ?? "Não foi possível remover a imagem.");
+          setError(body.error?.message ?? "Não foi possível remover a imagem.");
           return;
         }
 
-        const remaining = (await res.json()) as ProductImage[];
-        setImages(remaining);
+        const body = (await res.json()) as { data: ProductImage[] };
+        setImages(body.data);
       } catch {
         setError("Erro de conexão. Tente novamente.");
       }
@@ -224,16 +226,17 @@ export function ImageManager({ productId, initialImages }: Props) {
 
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as {
-            error?: string;
+            error?: { message?: string };
           };
           setError(
-            body.error ?? "Não foi possível atualizar a imagem principal.",
+            body.error?.message ??
+              "Não foi possível atualizar a imagem principal.",
           );
           return;
         }
 
-        const updated = (await res.json()) as ProductImage[];
-        setImages(updated);
+        const body = (await res.json()) as { data: ProductImage[] };
+        setImages(body.data);
       } catch {
         setError("Erro de conexão. Tente novamente.");
       }

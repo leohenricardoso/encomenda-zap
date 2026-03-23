@@ -91,6 +91,28 @@ export class ReplaceProductImagesUseCase {
       );
     }
 
+    // Validate that targetPosition values are unique and form a contiguous
+    // sequence starting at 1, matching the repo's "positions are always
+    // contiguous" invariant.
+    if (slots.length > 0) {
+      const positions = slots.map((s) => s.targetPosition);
+      const uniquePositions = new Set(positions);
+      if (uniquePositions.size !== positions.length) {
+        throw new AppError(
+          "Image positions must be unique.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      const min = Math.min(...positions);
+      const max = Math.max(...positions);
+      if (min !== 1 || max !== slots.length) {
+        throw new AppError(
+          "Image positions must be contiguous starting from 1 with no gaps.",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
     for (const slot of slots) {
       if (slot.kind !== "new") continue;
       if (!ALLOWED_MIME_TYPES.has(slot.mimeType)) {
@@ -213,18 +235,16 @@ export class ReplaceProductImagesUseCase {
       // ── Phase 7: Atomic DB replace ────────────────────────────────────────
       // Build the ordered image list from slots (preserves position order).
 
-      const dbImages = slots
-        .filter((s) => s.kind !== ("empty" as string))
-        .map((slot) => {
-          const imageUrl = finalUrls.get(slot.targetPosition);
-          if (!imageUrl) {
-            throw new AppError(
-              `Failed to resolve final URL for position ${slot.targetPosition}.`,
-              HttpStatus.INTERNAL_SERVER_ERROR,
-            );
-          }
-          return { imageUrl, position: slot.targetPosition };
-        });
+      const dbImages = slots.map((slot) => {
+        const imageUrl = finalUrls.get(slot.targetPosition);
+        if (!imageUrl) {
+          throw new AppError(
+            `Failed to resolve final URL for position ${slot.targetPosition}.`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
+        return { imageUrl, position: slot.targetPosition };
+      });
 
       return this.imageRepo.replaceImages(productId, storeId, dbImages);
     } finally {

@@ -374,19 +374,24 @@ export function ProductForm({
         }
       }
 
-      // Edit mode: apply deferred image changes (delete removed, upload new, fix primary)
+      // Edit mode: apply deferred image changes (product metadata already saved)
       if (isEditMode && initialImages !== undefined) {
-        await applyImageChanges(productId!, imageSlots, initialImages);
+        try {
+          await applyImageChanges(productId!, imageSlots, initialImages);
+        } catch (imgErr) {
+          const msg = imgErr instanceof Error ? imgErr.message : "";
+          setServerError(
+            `Produto salvo, mas erro ao sincronizar imagens: ${msg || "Tente salvar novamente."}`,
+          );
+          return;
+        }
       }
 
       router.push("/dashboard/products");
       router.refresh();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
+    } catch {
       setServerError(
-        msg
-          ? `Erro ao atualizar imagens: ${msg} Tente salvar novamente.`
-          : "Falha de conexão. Verifique sua internet e tente novamente.",
+        "Falha de conexão. Verifique sua internet e tente novamente.",
       );
     } finally {
       setLoading(false);
