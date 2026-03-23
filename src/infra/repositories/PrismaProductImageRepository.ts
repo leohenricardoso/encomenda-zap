@@ -130,4 +130,29 @@ export class PrismaProductImageRepository implements IProductImageRepository {
       }
     });
   }
+
+  async deleteAllByProduct(productId: string, storeId: string): Promise<void> {
+    await prisma.productImage.deleteMany({ where: { productId, storeId } });
+  }
+
+  async replaceImages(
+    productId: string,
+    storeId: string,
+    images: Array<{ imageUrl: string; position: number }>,
+  ): Promise<ProductImage[]> {
+    const rows = await prisma.$transaction(async (tx) => {
+      await tx.productImage.deleteMany({ where: { productId, storeId } });
+      if (images.length === 0) return [];
+      return Promise.all(
+        images.map(({ imageUrl, position }) =>
+          tx.productImage.create({
+            data: { productId, storeId, imageUrl, position },
+          }),
+        ),
+      );
+    });
+    return rows
+      .map((r) => this.toEntity(r))
+      .sort((a, b) => a.position - b.position);
+  }
 }

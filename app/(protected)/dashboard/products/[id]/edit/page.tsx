@@ -4,6 +4,7 @@ import { getSession } from "@/infra/http/auth/getSession";
 import {
   getProductByIdUseCase,
   getProductImagesUseCase,
+  getProductCategoryIdsUseCase,
 } from "@/infra/composition";
 import { ProductForm } from "../../_components/ProductForm";
 
@@ -24,10 +25,10 @@ export default async function EditProductPage({ params }: Props) {
     notFound();
   }
 
-  const productImages = await getProductImagesUseCase.execute(
-    product!.id,
-    session.storeId,
-  );
+  const [productImages, productCategoryIds] = await Promise.all([
+    getProductImagesUseCase.execute(product!.id, session.storeId),
+    getProductCategoryIdsUseCase.execute(product!.id, session.storeId),
+  ]);
 
   return (
     <main className="p-6 max-w-2xl mx-auto">
@@ -50,6 +51,7 @@ export default async function EditProductPage({ params }: Props) {
       <ProductForm
         productId={product!.id}
         initialImages={productImages}
+        initialCategoryIds={productCategoryIds}
         initialValues={{
           name: product!.name,
           description: product!.description ?? "",

@@ -62,110 +62,99 @@ const EMPTY_VARIANT: VariantRow = {
   isActive: true,
 };
 
-// ─── Image sync helper (edit mode) ──────────────────────────────────────────
-
-type ServerImg = { id: string; imageUrl: string; position: number };
+// ─── Image sync helpers (edit mode) ──────────────────────────────────────────
 
 /**
- * Reconciles local image state with S3/DB after a successful product update.
- * Operates best-effort: individual failures are silently ignored so the user
- * is never left stranded after a successful product save.
+ * Returns true if the user made any change to the image set:
+ *   - Added a new image (pending slot)
+ *   - Removed an existing image
+ *   - Reordered existing images
  *
- * Algorithm:
- *  1. DELETE images that were removed locally (server repacks positions).
- *  2. Upload pending files in slot order (lowest slot → lowest available position).
- *  3. Call PATCH /primary if the intended position-1 image differs from server.
+ * Used as a guard to skip S3 operations when nothing changed.
+ */
+function hasImageChanges(
+  slots: LocalSlot[],
+  initialImages: ProductImage[],
+): boolean {
+  // Any newly staged files
+  if (slots.some((s) => s.kind === "pending")) return true;
+
+  // Build ordered list of kept IDs (index = desired position - 1)
+  const currentIds = slots
+    .filter(
+      (s): s is Extract<LocalSlot, { kind: "existing" }> =>
+        s.kind === "existing",
+    )
+    .map((s) => s.id);
+
+  // Sorted initial IDs (position ascending)
+  const initialIds = [...initialImages]
+    .sort((a, b) => a.position - b.position)
+    .map((img) => img.id);
+
+  // Different count means at least one image was removed
+  if (currentIds.length !== initialIds.length) return true;
+
+  // Same count but different order or membership
+  for (let i = 0; i < currentIds.length; i++) {
+    if (currentIds[i] !== initialIds[i]) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Sends the full preview image state to PUT /api/products/:id/images/replace.
+ *
+ * The server atomically replaces ALL images for the product:
+ *   1. Copies kept images to temp S3 keys (isolates them from key changes)
+ *   2. Deletes all old positional S3 keys
+ *   3. Uploads new files + copies kept images to their final target positions
+ *   4. Atomically replaces all DB records
+ *
+ * This guarantees S3 and DB are always in sync with what the user sees in
+ * the preview — no partial updates, no orphaned objects.
+ *
+ * Skips all network activity when the image set has not been modified.
  */
 async function applyImageChanges(
   productId: string,
   slots: LocalSlot[],
   initialImages: ProductImage[],
 ): Promise<void> {
-  // IDs the user wants to keep
-  const keptIds = new Set(
-    slots
-      .filter(
-        (s): s is Extract<LocalSlot, { kind: "existing" }> =>
-          s.kind === "existing",
-      )
-      .map((s) => s.id),
-  );
+  if (!hasImageChanges(slots, initialImages)) return;
 
-  const toDelete = initialImages.filter((img) => !keptIds.has(img.id));
+  const formData = new FormData();
 
-  // Track server images so we can compare primary at the end
-  let serverImgs: ServerImg[] = initialImages.map(
-    ({ id, imageUrl, position }) => ({
-      id,
-      imageUrl,
-      position,
-    }),
-  );
-
-  // Step 1 — Delete removed images (server repacks positions after each delete)
-  for (const img of toDelete) {
-    try {
-      const res = await fetch(`/api/products/images/${img.id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        const body = (await res.json()) as {
-          success: boolean;
-          data: ServerImg[];
-        };
-        serverImgs = body.data;
+  const slotSpec = slots
+    .filter((s) => s.kind !== "empty")
+    .map((slot, i) => {
+      const targetPosition = i + 1;
+      if (slot.kind === "existing") {
+        return { kind: "existing", id: slot.id, targetPosition };
       }
-    } catch {
-      // Best-effort — continue to next operation
-    }
-  }
+      // kind === "pending"
+      return { kind: "new", key: slot.tempId, targetPosition };
+    });
 
-  // Step 2 — Upload new pending files in slot order
-  const uploadedTempToId = new Map<string, string>();
+  formData.append("slots", JSON.stringify(slotSpec));
+
   for (const slot of slots) {
-    if (slot.kind !== "pending") continue;
-    try {
-      const form = new FormData();
-      form.append("file", slot.file);
-      const res = await fetch(`/api/products/${productId}/images/upload`, {
-        method: "POST",
-        body: form,
-      });
-      if (res.ok) {
-        const body = (await res.json()) as {
-          success: boolean;
-          data: ServerImg;
-        };
-        uploadedTempToId.set(slot.tempId, body.data.id);
-        serverImgs.push(body.data);
-      }
-    } catch {
-      // Best-effort — continue to next operation
+    if (slot.kind === "pending") {
+      formData.append(`file_${slot.tempId}`, slot.file);
     }
   }
 
-  // Step 3 — Ensure the intended primary image is at position 1
-  const primarySlot = slots[0];
-  if (!primarySlot || primarySlot.kind === "empty") return;
+  const res = await fetch(`/api/products/${productId}/images/replace`, {
+    method: "PUT",
+    body: formData,
+  });
 
-  let desiredPrimaryId: string | null = null;
-  if (primarySlot.kind === "existing") {
-    desiredPrimaryId = primarySlot.id;
-  } else if (primarySlot.kind === "pending") {
-    desiredPrimaryId = uploadedTempToId.get(primarySlot.tempId) ?? null;
-  }
-
-  if (!desiredPrimaryId) return;
-
-  const serverPrimary = serverImgs.find((img) => img.position === 1);
-  if (serverPrimary && serverPrimary.id !== desiredPrimaryId) {
-    try {
-      await fetch(`/api/products/images/${desiredPrimaryId}/primary`, {
-        method: "PATCH",
-      });
-    } catch {
-      // Best-effort
-    }
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(
+      json.error ?? "Erro ao sincronizar imagens com o servidor.",
+    );
   }
 }
 
@@ -387,18 +376,17 @@ export function ProductForm({
 
       // Edit mode: apply deferred image changes (delete removed, upload new, fix primary)
       if (isEditMode && initialImages !== undefined) {
-        try {
-          await applyImageChanges(productId!, imageSlots, initialImages);
-        } catch {
-          // Best-effort — product metadata was already saved successfully.
-        }
+        await applyImageChanges(productId!, imageSlots, initialImages);
       }
 
       router.push("/dashboard/products");
       router.refresh();
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
       setServerError(
-        "Falha de conexão. Verifique sua internet e tente novamente.",
+        msg
+          ? `Erro ao atualizar imagens: ${msg} Tente salvar novamente.`
+          : "Falha de conexão. Verifique sua internet e tente novamente.",
       );
     } finally {
       setLoading(false);

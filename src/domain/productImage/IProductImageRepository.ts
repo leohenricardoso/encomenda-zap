@@ -56,4 +56,30 @@ export interface IProductImageRepository {
    * No-op when zero images remain.
    */
   repackPositions(productId: string, storeId: string): Promise<void>;
+
+  /**
+   * Deletes ALL database records for a product in one pass.
+   * Does NOT delete S3 objects — callers must remove those separately
+   * before or after calling this method.
+   *
+   * Used by ReplaceProductImagesUseCase to atomically replace the full
+   * image set with no partial state.
+   */
+  deleteAllByProduct(productId: string, storeId: string): Promise<void>;
+
+  /**
+   * Atomically replaces all image records for a product in a single
+   * database transaction.
+   *
+   * Deletes every existing record for (productId, storeId), then inserts
+   * the provided images.  The whole operation is wrapped in a transaction
+   * so a partial failure leaves the previous state fully intact.
+   *
+   * Returns the newly created images sorted by position ascending.
+   */
+  replaceImages(
+    productId: string,
+    storeId: string,
+    images: Array<{ imageUrl: string; position: number }>,
+  ): Promise<ProductImage[]>;
 }
