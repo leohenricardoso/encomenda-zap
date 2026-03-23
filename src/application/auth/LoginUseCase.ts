@@ -61,6 +61,13 @@ export class LoginUseCase {
       throw new AppError(INVALID_CREDENTIALS_MESSAGE, HttpStatus.UNAUTHORIZED);
     }
 
+    if (admin.storeStatus !== "ACTIVE") {
+      throw new AppError(
+        "Sua loja está inativa ou suspensa. Entre em contato com o suporte.",
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     return { adminId: admin.id, storeId: admin.storeId };
   }
 }

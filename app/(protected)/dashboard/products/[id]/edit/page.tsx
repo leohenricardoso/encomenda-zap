@@ -4,9 +4,9 @@ import { getSession } from "@/infra/http/auth/getSession";
 import {
   getProductByIdUseCase,
   getProductImagesUseCase,
+  getProductCategoryIdsUseCase,
 } from "@/infra/composition";
 import { ProductForm } from "../../_components/ProductForm";
-import { ProductImageUploader } from "../../_components/ProductImageUploader";
 
 export const metadata = { title: "Editar Produto" };
 
@@ -25,10 +25,10 @@ export default async function EditProductPage({ params }: Props) {
     notFound();
   }
 
-  const productImages = await getProductImagesUseCase.execute(
-    product!.id,
-    session.storeId,
-  );
+  const [productImages, productCategoryIds] = await Promise.all([
+    getProductImagesUseCase.execute(product!.id, session.storeId),
+    getProductCategoryIdsUseCase.execute(product!.id, session.storeId),
+  ]);
 
   return (
     <main className="p-6 max-w-2xl mx-auto">
@@ -48,15 +48,10 @@ export default async function EditProductPage({ params }: Props) {
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Editar produto</h1>
       <p className="text-sm text-gray-500 mb-6">{product!.name}</p>
 
-      <ProductImageUploader
-        productId={product!.id}
-        initialImages={productImages}
-      />
-
-      <div className="mt-8" />
-
       <ProductForm
         productId={product!.id}
+        initialImages={productImages}
+        initialCategoryIds={productCategoryIds}
         initialValues={{
           name: product!.name,
           description: product!.description ?? "",

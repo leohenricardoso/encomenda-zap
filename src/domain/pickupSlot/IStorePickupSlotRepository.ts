@@ -45,4 +45,10 @@ export interface IStorePickupSlotRepository {
     storeId: string,
     isActive: boolean,
   ): Promise<StorePickupSlot | null>;
+
+  /**
+   * Permanently remove a slot.
+   * Returns true if deleted, false if not found or belongs to a different store.
+   */
+  delete(id: string, storeId: string): Promise<boolean>;
 }

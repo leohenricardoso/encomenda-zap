@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getStoreCatalogUseCase } from "@/infra/composition";
+import { AppError } from "@/shared/errors/AppError";
+import { HttpStatus } from "@/shared/http/statuses";
 import { CatalogHeader } from "./_components/CatalogHeader";
 import { CatalogProductList } from "./_components/CatalogProductList";
 import { CatalogPickupInfo } from "./_components/CatalogPickupInfo";
@@ -56,9 +58,33 @@ export default async function CatalogPage({ params }: Props) {
   const { storeSlug } = await params;
 
   let catalog;
+  let storeInactive = false;
   try {
     catalog = await getStoreCatalogUseCase.execute(storeSlug);
-  } catch {
+  } catch (err) {
+    if (err instanceof AppError && err.statusCode === HttpStatus.FORBIDDEN) {
+      storeInactive = true;
+    } else {
+      notFound();
+    }
+  }
+
+  if (storeInactive) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--color-bg-muted))] px-4 text-center">
+        <p className="text-4xl">🔒</p>
+        <h1 className="mt-4 text-xl font-semibold text-[rgb(var(--color-text))]">
+          Loja indisponível
+        </h1>
+        <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">
+          Esta loja está temporariamente indisponível. Tente novamente mais
+          tarde.
+        </p>
+      </div>
+    );
+  }
+
+  if (!catalog) {
     notFound();
   }
 

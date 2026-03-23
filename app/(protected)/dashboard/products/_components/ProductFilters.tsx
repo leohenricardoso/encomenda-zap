@@ -14,7 +14,8 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useTransition } from "react";
+import { useCallback, useTransition, useState } from "react";
+import { Button } from "../../../../_components/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,46 +58,50 @@ export function ProductFilters() {
   const params = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  // Read current values from URL with safe defaults
-  const search = params.get("search") ?? "";
-  const status = (params.get("status") ?? "all") as StatusFilter;
-  const sort = params.get("sort") ?? "createdAt";
-  const order = params.get("order") ?? "desc";
-  const sortValue = `${sort}__${order}`;
+  // Read applied values from URL with safe defaults
+  const appliedSearch = params.get("search") ?? "";
+  const appliedStatus = (params.get("status") ?? "all") as StatusFilter;
+  const appliedSort = params.get("sort") ?? "createdAt";
+  const appliedOrder = params.get("order") ?? "desc";
 
-  /** Update one or more params and push to the router */
-  const updateParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const next = new URLSearchParams(params.toString());
-      for (const [key, value] of Object.entries(updates)) {
-        if (value === null || value === "") {
-          next.delete(key);
-        } else {
-          next.set(key, value);
-        }
-      }
-      // Always reset to page 1 when a filter changes
-      next.delete("page");
-      startTransition(() => {
-        router.push(`${pathname}?${next.toString()}`);
-      });
-    },
-    [params, pathname, router],
-  );
+  // ── Draft state (local typing state, not yet applied) ─────────────────────
+  const [draftSearch, setDraftSearch] = useState(appliedSearch);
+  const [draftStatus, setDraftStatus] = useState<StatusFilter>(appliedStatus);
+  const [draftSort, setDraftSort] = useState(`${appliedSort}__${appliedOrder}`);
 
-  // ─── Event handlers ────────────────────────────────────────────────────────
+  const isFiltered = !!(params.get("search") || params.get("status"));
 
-  function handleSearch(e: React.ChangeEvent<HTMLInputElement>) {
-    updateParams({ search: e.target.value || null });
+  /** Push all draft values to the URL — triggers server re-render once */
+  const applyFilters = useCallback(() => {
+    const next = new URLSearchParams(params.toString());
+
+    if (draftSearch.trim()) next.set("search", draftSearch.trim());
+    else next.delete("search");
+
+    if (draftStatus !== "all") next.set("status", draftStatus);
+    else next.delete("status");
+
+    const [field, dir] = draftSort.split("__") as [SortField, SortOrder];
+    next.set("sort", field);
+    next.set("order", dir);
+
+    next.delete("page");
+    startTransition(() => {
+      router.push(`${pathname}?${next.toString()}`);
+    });
+  }, [draftSearch, draftStatus, draftSort, params, pathname, router]);
+
+  function handleReset() {
+    setDraftSearch("");
+    setDraftStatus("all");
+    setDraftSort("createdAt__desc");
+    startTransition(() => {
+      router.push(pathname);
+    });
   }
 
-  function handleStatus(value: StatusFilter) {
-    updateParams({ status: value === "all" ? null : value });
-  }
-
-  function handleSort(e: React.ChangeEvent<HTMLSelectElement>) {
-    const [field, dir] = e.target.value.split("__") as [SortField, SortOrder];
-    updateParams({ sort: field, order: dir });
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") applyFilters();
   }
 
   return (
@@ -133,8 +138,9 @@ export function ProductFilters() {
         <input
           type="search"
           placeholder="Buscar produto..."
-          defaultValue={search}
-          onChange={handleSearch}
+          value={draftSearch}
+          onChange={(e) => setDraftSearch(e.target.value)}
+          onKeyDown={handleKeyDown}
           aria-label="Buscar por nome"
           className={[CONTROL_BASE, "w-full pl-9 pr-4"].join(" ")}
         />
@@ -147,12 +153,12 @@ export function ProductFilters() {
         aria-label="Filtrar por status"
       >
         {STATUS_OPTIONS.map((opt) => {
-          const isActive = status === opt.value;
+          const isActive = draftStatus === opt.value;
           return (
             <button
               key={opt.value}
               type="button"
-              onClick={() => handleStatus(opt.value)}
+              onClick={() => setDraftStatus(opt.value)}
               aria-pressed={isActive}
               className={[
                 "rounded-md px-3 py-1 text-xs font-medium transition-colors",
@@ -170,8 +176,8 @@ export function ProductFilters() {
 
       {/* ── Sort select ───────────────────────────────────────────────── */}
       <select
-        value={sortValue}
-        onChange={handleSort}
+        value={draftSort}
+        onChange={(e) => setDraftSort(e.target.value)}
         aria-label="Ordenar produtos"
         className={[CONTROL_BASE, "shrink-0 pr-8 sm:w-auto"].join(" ")}
       >
@@ -181,6 +187,26 @@ export function ProductFilters() {
           </option>
         ))}
       </select>
+
+      {/* ── Actions ──────────────────────────────────────────────────── */}
+      <div className="flex shrink-0 items-center gap-2">
+        <Button type="button" size="sm" onClick={applyFilters}>
+          Filtrar
+        </Button>
+        {isFiltered && (
+          <button
+            type="button"
+            onClick={handleReset}
+            className={[
+              "h-8 rounded-lg border border-[rgb(var(--color-border))]",
+              "bg-[rgb(var(--color-bg))] px-3 text-xs text-[rgb(var(--color-text-muted))]",
+              "transition-colors hover:border-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]",
+            ].join(" ")}
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
     </div>
   );
 }

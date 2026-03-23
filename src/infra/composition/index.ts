@@ -74,6 +74,7 @@ import { SetDayAvailabilityUseCase } from "@/application/schedule/SetDayAvailabi
 import { ListPickupSlotsUseCase } from "@/application/pickupSlot/ListPickupSlotsUseCase";
 import { CreatePickupSlotUseCase } from "@/application/pickupSlot/CreatePickupSlotUseCase";
 import { TogglePickupSlotUseCase } from "@/application/pickupSlot/TogglePickupSlotUseCase";
+import { DeletePickupSlotUseCase } from "@/application/pickupSlot/DeletePickupSlotUseCase";
 import { GetPublicPickupSlotsUseCase } from "@/application/pickupSlot/GetPublicPickupSlotsUseCase";
 import { GetCepRangeUseCase } from "@/application/cepRange/GetCepRangeUseCase";
 import { AddCepRangeUseCase } from "@/application/cepRange/UpsertCepRangeUseCase";
@@ -90,6 +91,7 @@ import { GetMinimumAdvanceDaysUseCase } from "@/application/store/GetMinimumAdva
 import { UpdateMinimumAdvanceDaysUseCase } from "@/application/store/UpdateMinimumAdvanceDaysUseCase";
 import { AddProductImageUseCase } from "@/application/productImage/AddProductImageUseCase";
 import { GetProductImagesUseCase } from "@/application/productImage/GetProductImagesUseCase";
+import { ReplaceProductImagesUseCase } from "@/application/productImage/ReplaceProductImagesUseCase";
 import { RemoveProductImageUseCase } from "@/application/productImage/RemoveProductImageUseCase";
 import { SetImageAsPrimaryUseCase } from "@/application/productImage/SetImageAsPrimaryUseCase";
 import { UploadProductImageUseCase } from "@/application/productImage/UploadProductImageUseCase";
@@ -101,6 +103,7 @@ import { AssignProductToCategoryUseCase } from "@/application/category/AssignPro
 import { RemoveProductFromCategoryUseCase } from "@/application/category/RemoveProductFromCategoryUseCase";
 import { ReorderCategoryProductsUseCase } from "@/application/category/ReorderCategoryProductsUseCase";
 import { GetCategoryProductsUseCase } from "@/application/category/GetCategoryProductsUseCase";
+import { GetProductCategoryIdsUseCase } from "@/application/category/GetProductCategoryIdsUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -115,6 +118,7 @@ import { StorePickupSlotController } from "@/controllers/http/StorePickupSlotCon
 import { StoreCepRangeController } from "@/controllers/http/StoreCepRangeController";
 import { ProductImageController } from "@/controllers/http/ProductImageController";
 import { ProductImageUploadController } from "@/controllers/http/ProductImageUploadController";
+import { ReplaceProductImagesController } from "@/controllers/http/ReplaceProductImagesController";
 import { CategoryController } from "@/controllers/http/CategoryController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
@@ -260,6 +264,16 @@ export const productImageUploadController = new ProductImageUploadController(
   uploadProductImageUseCase,
 );
 
+// ─── Product Image Replace (full-sync, edit mode) ──────────────────────────
+
+const replaceProductImagesUseCase = new ReplaceProductImagesUseCase(
+  productRepo,
+  imageRepo,
+);
+
+export const replaceProductImagesController =
+  new ReplaceProductImagesController(replaceProductImagesUseCase);
+
 /**
  * Repository singletons — available for direct import in future use cases.
  */
@@ -282,6 +296,7 @@ export { getStoreScheduleUseCase };
 const listPickupSlotsUseCase = new ListPickupSlotsUseCase(pickupSlotRepo);
 const createPickupSlotUseCase = new CreatePickupSlotUseCase(pickupSlotRepo);
 const togglePickupSlotUseCase = new TogglePickupSlotUseCase(pickupSlotRepo);
+const deletePickupSlotUseCase = new DeletePickupSlotUseCase(pickupSlotRepo);
 const getPublicPickupSlotsUseCase = new GetPublicPickupSlotsUseCase(
   catalogRepo,
   pickupSlotRepo,
@@ -291,6 +306,7 @@ export const storePickupSlotController = new StorePickupSlotController(
   listPickupSlotsUseCase,
   createPickupSlotUseCase,
   togglePickupSlotUseCase,
+  deletePickupSlotUseCase,
   getPublicPickupSlotsUseCase,
 );
 
@@ -361,6 +377,9 @@ export const removeProductFromCategoryUseCase =
 export const reorderCategoryProductsUseCase =
   new ReorderCategoryProductsUseCase(productCategoryRepo);
 export const getCategoryProductsUseCase = new GetCategoryProductsUseCase(
+  productCategoryRepo,
+);
+export const getProductCategoryIdsUseCase = new GetProductCategoryIdsUseCase(
   productCategoryRepo,
 );
 

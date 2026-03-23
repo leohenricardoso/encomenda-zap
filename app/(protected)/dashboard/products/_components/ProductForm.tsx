@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import type { ProductImage } from "@/domain/productImage/ProductImage";
 import { NewProductImagePicker } from "./NewProductImagePicker";
+import {
+  EditProductImagePicker,
+  buildInitialSlots,
+  type LocalSlot,
+} from "./EditProductImagePicker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +39,8 @@ interface Props {
   initialValues?: Partial<ProductFormValues & { variants?: VariantRow[] }>;
   /** Pre-selected category IDs (edit mode). */
   initialCategoryIds?: string[];
+  /** Pre-loaded images (edit mode). When provided, edit-mode image picker is shown. */
+  initialImages?: ProductImage[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -54,12 +62,109 @@ const EMPTY_VARIANT: VariantRow = {
   isActive: true,
 };
 
+// ─── Image sync helpers (edit mode) ──────────────────────────────────────────
+
+/**
+ * Returns true if the user made any change to the image set:
+ *   - Added a new image (pending slot)
+ *   - Removed an existing image
+ *   - Reordered existing images
+ *
+ * Used as a guard to skip S3 operations when nothing changed.
+ */
+function hasImageChanges(
+  slots: LocalSlot[],
+  initialImages: ProductImage[],
+): boolean {
+  // Any newly staged files
+  if (slots.some((s) => s.kind === "pending")) return true;
+
+  // Build ordered list of kept IDs (index = desired position - 1)
+  const currentIds = slots
+    .filter(
+      (s): s is Extract<LocalSlot, { kind: "existing" }> =>
+        s.kind === "existing",
+    )
+    .map((s) => s.id);
+
+  // Sorted initial IDs (position ascending)
+  const initialIds = [...initialImages]
+    .sort((a, b) => a.position - b.position)
+    .map((img) => img.id);
+
+  // Different count means at least one image was removed
+  if (currentIds.length !== initialIds.length) return true;
+
+  // Same count but different order or membership
+  for (let i = 0; i < currentIds.length; i++) {
+    if (currentIds[i] !== initialIds[i]) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Sends the full preview image state to PUT /api/products/:id/images/replace.
+ *
+ * The server atomically replaces ALL images for the product:
+ *   1. Copies kept images to temp S3 keys (isolates them from key changes)
+ *   2. Deletes all old positional S3 keys
+ *   3. Uploads new files + copies kept images to their final target positions
+ *   4. Atomically replaces all DB records
+ *
+ * This guarantees S3 and DB are always in sync with what the user sees in
+ * the preview — no partial updates, no orphaned objects.
+ *
+ * Skips all network activity when the image set has not been modified.
+ */
+async function applyImageChanges(
+  productId: string,
+  slots: LocalSlot[],
+  initialImages: ProductImage[],
+): Promise<void> {
+  if (!hasImageChanges(slots, initialImages)) return;
+
+  const formData = new FormData();
+
+  const slotSpec = slots
+    .filter((s) => s.kind !== "empty")
+    .map((slot, i) => {
+      const targetPosition = i + 1;
+      if (slot.kind === "existing") {
+        return { kind: "existing", id: slot.id, targetPosition };
+      }
+      // kind === "pending"
+      return { kind: "new", key: slot.tempId, targetPosition };
+    });
+
+  formData.append("slots", JSON.stringify(slotSpec));
+
+  for (const slot of slots) {
+    if (slot.kind === "pending") {
+      formData.append(`file_${slot.tempId}`, slot.file);
+    }
+  }
+
+  const res = await fetch(`/api/products/${productId}/images/replace`, {
+    method: "PUT",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(
+      json.error ?? "Erro ao sincronizar imagens com o servidor.",
+    );
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ProductForm({
   productId,
   initialValues,
   initialCategoryIds,
+  initialImages,
 }: Props) {
   const router = useRouter();
   const isEditMode = productId !== undefined;
@@ -81,6 +186,14 @@ export function ProductForm({
 
   /** Files staged for upload in create mode (uploaded after product creation). */
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+
+  /**
+   * Ordered image slots for edit mode.
+   * Initialised from initialImages; mutations are local-only until submit.
+   */
+  const [imageSlots, setImageSlots] = useState<LocalSlot[]>(() =>
+    initialImages ? buildInitialSlots(initialImages) : [],
+  );
 
   /** Available categories fetched on mount. */
   const [availableCategories, setAvailableCategories] = useState<
@@ -261,6 +374,19 @@ export function ProductForm({
         }
       }
 
+      // Edit mode: apply deferred image changes (product metadata already saved)
+      if (isEditMode && initialImages !== undefined) {
+        try {
+          await applyImageChanges(productId!, imageSlots, initialImages);
+        } catch (imgErr) {
+          const msg = imgErr instanceof Error ? imgErr.message : "";
+          setServerError(
+            `Produto salvo, mas erro ao sincronizar imagens: ${msg || "Tente salvar novamente."}`,
+          );
+          return;
+        }
+      }
+
       router.push("/dashboard/products");
       router.refresh();
     } catch {
@@ -286,13 +412,19 @@ export function ProductForm({
         </div>
       )}
 
-      {/* Image picker — only rendered in create mode */}
-      {!isEditMode && (
+      {/* Image management — edit: deferred local state, create: staged files */}
+      {isEditMode && initialImages !== undefined ? (
+        <EditProductImagePicker
+          initialImages={initialImages}
+          slots={imageSlots}
+          onChange={setImageSlots}
+        />
+      ) : !isEditMode ? (
         <NewProductImagePicker
           files={pendingImages}
           onChange={setPendingImages}
         />
-      )}
+      ) : null}
 
       {/* Name */}
       <div>
