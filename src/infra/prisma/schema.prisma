@@ -54,6 +54,7 @@ model Store {
   cepRanges    StoreCepRange[]
   orderCounter StoreOrderCounter?
   messageConfig StoreMessageConfig?
+  dailyProductionChecklistItems DailyProductionChecklistItem[]
 
   @@index([slug])
   @@index([status])
@@ -554,4 +555,33 @@ model ProductCategory {
   @@index([productId])
   @@index([storeId])
   @@map("product_categories")
+}
+
+// ─── DailyProductionChecklistItem ────────────────────────────────────────────
+// Tracks which aggregated production items have been marked as "produced"
+// for a given store and date.
+//
+// Design notes:
+// ─ itemKey is a composite identifier: "${productId}::${variantId ?? 'no-variant'}".
+//   This is stable across renames — it references the actual product/variant
+//   IDs rather than the display names.
+// ─ date is stored as a YYYY-MM-DD string — same convention as StoreSchedule.
+// ─ @@unique([storeId, date, itemKey]) ensures one row per item per day per store.
+//   Toggle logic uses upsert/delete against this constraint.
+// ─ producedAt records when the item was last marked as produced.
+
+model DailyProductionChecklistItem {
+  id         String   @id @default(cuid())
+  storeId    String
+  /// Calendar date in YYYY-MM-DD format (e.g. "2026-03-15").
+  date       String
+  /// Composite identifier: "${productId}::${variantId ?? 'no-variant'}"
+  itemKey    String
+  producedAt DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, date, itemKey])
+  @@index([storeId, date])
+  @@map("daily_production_checklist_items")
 }
