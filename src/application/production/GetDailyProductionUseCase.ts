@@ -90,6 +90,8 @@ export class GetDailyProductionUseCase {
           customerName: order.customerName,
           quantity: item.quantity,
           deliveryTime: order.pickupTime,
+          customerWhatsapp: order.customerWhatsapp,
+          notes: order.notes,
         };
 
         if (itemsInCategory.has(itemKey)) {

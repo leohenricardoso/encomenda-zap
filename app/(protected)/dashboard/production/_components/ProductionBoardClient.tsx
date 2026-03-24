@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import type {
   DailyProductionGroup,
@@ -51,6 +51,33 @@ export function ProductionBoardClient({
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
 
   const producedCount = producedKeys.size;
+
+  // ── Search filter ─────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const filteredGroups =
+    debouncedSearch === ""
+      ? groups
+      : groups
+          .map((group) => {
+            const q = debouncedSearch.toLowerCase();
+            const categoryMatch = group.categoryName.toLowerCase().includes(q);
+            if (categoryMatch) return group;
+            const matchingItems = group.items.filter(
+              (item) =>
+                item.productName.toLowerCase().includes(q) ||
+                (item.variationLabel?.toLowerCase().includes(q) ?? false),
+            );
+            if (matchingItems.length === 0) return null;
+            return { ...group, items: matchingItems };
+          })
+          .filter((g): g is NonNullable<typeof g> => g !== null);
 
   // ── Date navigation ───────────────────────────────────────────────────────
   function navigateToDate(newDate: string) {
@@ -224,6 +251,31 @@ export function ProductionBoardClient({
         </div>
       </div>
 
+      {/* ── Search filter ─────────────────────────────────────────────────── */}
+      <div className="mb-4 relative print:hidden">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+          />
+        </svg>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar produto ou categoria…"
+          className="w-full rounded-lg border border-line bg-surface pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+        />
+      </div>
+
       {/* ── Progress bar ──────────────────────────────────────────────────── */}
       {totalItems > 0 && (
         <div className="mb-6">
@@ -253,9 +305,18 @@ export function ProductionBoardClient({
               : "Não há pedidos aprovados para este dia. Tente incluir os pendentes."}
           </p>
         </div>
+      ) : filteredGroups.length === 0 ? (
+        <div className="rounded-xl border border-line bg-surface p-12 text-center">
+          <p className="text-base font-medium text-foreground">
+            Nenhum resultado encontrado
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Tente buscar por outro nome de produto ou categoria.
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {groups.map((group) => (
+          {filteredGroups.map((group) => (
             <CategorySection
               key={group.categoryName}
               group={group}

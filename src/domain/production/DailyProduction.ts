@@ -28,6 +28,10 @@ export interface DailyProductionOrderRef {
   quantity: number;
   /** Pickup time window, e.g. "09:00 – 12:00". Null for delivery orders. */
   deliveryTime: string | null;
+  /** Digits-only WhatsApp number for quick-action button. */
+  customerWhatsapp: string;
+  /** Customer observation note. Null if none. */
+  notes: string | null;
 }
 
 // ─── Aggregated production item ───────────────────────────────────────────────

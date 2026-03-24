@@ -60,6 +60,12 @@ export default async function OrderDetailPage({ params }: Props) {
     ),
   )}`;
 
+  const observationWaUrl = order.notes
+    ? `https://wa.me/${waDigits}?text=${encodeURIComponent(
+        `Olá, tudo bem? Referente à observação do pedido #${order.orderNumber ?? "—"}, na qual diz: '${order.notes}', gostaria de confirmar algumas informações.`,
+      )}`
+    : null;
+
   const subtotal = order.items.reduce(
     (sum, item) => sum + (item.unitPrice - item.discountAmount) * item.quantity,
     0,
@@ -102,7 +108,7 @@ export default async function OrderDetailPage({ params }: Props) {
               <OrderItemsCard items={order.items} />
 
               {/* 3. Customer notes — highlighted only when present */}
-              {order.notes && <OrderNotesCard notes={order.notes} />}
+              {order.notes && <OrderNotesCard notes={order.notes} waUrl={observationWaUrl ?? undefined} />}
             </div>
 
             {/* ══ Sidebar ══════════════════════════════════════════════════ */}
