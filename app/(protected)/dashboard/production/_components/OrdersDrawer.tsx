@@ -105,7 +105,10 @@ export function OrdersDrawer({ item, onClose }: OrdersDrawerProps) {
               : null;
 
             return (
-              <div key={order.orderId} className="px-6 py-4 hover:bg-hover transition-colors">
+              <div
+                key={order.orderId}
+                className="px-6 py-4 hover:bg-hover transition-colors"
+              >
                 {/* Row 1: order id + qty + time */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -117,15 +120,21 @@ export function OrdersDrawer({ item, onClose }: OrdersDrawerProps) {
                         #{order.incrementId}
                       </Link>
                     ) : (
-                      <span className="text-sm font-semibold text-foreground">—</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        —
+                      </span>
                     )}
-                    <span className="text-sm text-foreground">{order.customerName}</span>
+                    <span className="text-sm text-foreground">
+                      {order.customerName}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-sm font-bold tabular-nums text-accent">
                       {order.quantity}
                     </span>
-                    <span className="text-sm text-muted">{order.deliveryTime ?? "—"}</span>
+                    <span className="text-sm text-muted">
+                      {order.deliveryTime ?? "—"}
+                    </span>
                   </div>
                 </div>
 
@@ -134,7 +143,9 @@ export function OrdersDrawer({ item, onClose }: OrdersDrawerProps) {
                   {order.notes ? (
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-amber-700">Observação</p>
+                        <p className="text-xs font-medium text-amber-700">
+                          Observação
+                        </p>
                         <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
                           {order.notes}
                         </p>

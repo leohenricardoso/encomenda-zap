@@ -18,6 +18,7 @@ import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
+import { CopyCatalogLinkButton } from "./CopyCatalogLinkButton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,11 +26,13 @@ interface AppShellProps {
   children: ReactNode;
   /** Passed down from the Server Component layout (e.g. from getSession) */
   storeName?: string;
+  /** Store URL slug — when present, a copy-catalog-link button is shown in the header */
+  storeSlug?: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AppShell({ children, storeName }: AppShellProps) {
+export function AppShell({ children, storeName, storeSlug }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Stable references — prevent Sidebar's useEffect from re-running
@@ -52,7 +55,13 @@ export function AppShell({ children, storeName }: AppShellProps) {
        */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <Header onMenuClick={openSidebar} storeName={storeName} />
+        <Header
+          onMenuClick={openSidebar}
+          storeName={storeName}
+          actions={
+            storeSlug ? <CopyCatalogLinkButton slug={storeSlug} /> : undefined
+          }
+        />
 
         {/* Scrollable page content */}
         <main

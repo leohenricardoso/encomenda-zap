@@ -12,6 +12,7 @@ import {
   getCepRangeUseCase,
   getStoreWhatsappUseCase,
   getStorePickupAddressUseCase,
+  getStoreIdentityUseCase,
   storeRepo,
 } from "@/infra/composition";
 import { DeliverySettings } from "./_components/DeliverySettings";
@@ -21,12 +22,13 @@ import { ContactSettings } from "./_components/ContactSettings";
 export default async function SettingsPage() {
   const session = await getSession();
 
-  const [ranges, currentWhatsapp, pickupAddress, defaultDeliveryFee] =
+  const [ranges, currentWhatsapp, pickupAddress, defaultDeliveryFee, identity] =
     await Promise.all([
       getCepRangeUseCase.execute(session.storeId),
       getStoreWhatsappUseCase.execute(session.storeId),
       getStorePickupAddressUseCase.execute(session.storeId),
       storeRepo.findDefaultDeliveryFee(session.storeId),
+      getStoreIdentityUseCase.execute(session.storeId),
     ]);
 
   return (
@@ -55,7 +57,11 @@ export default async function SettingsPage() {
         />
 
         {/* ── Informações da loja ──────────────────────────────────────────── */}
-        <StoreInfoSettings currentWhatsapp={currentWhatsapp} />
+        <StoreInfoSettings
+          currentWhatsapp={currentWhatsapp}
+          storeName={identity.name}
+          storeSlug={identity.slug ?? ""}
+        />
 
         {/* ── Mensagens ───────────────────────────────────────────────────── */}
         <ContactSettings />

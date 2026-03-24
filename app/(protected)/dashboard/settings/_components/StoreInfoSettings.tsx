@@ -1,26 +1,36 @@
 /**
  * StoreInfoSettings — groups store identity / contact configuration.
  *
- * Currently contains:
- *  - WhatsappForm  (store contact number visible on the public catalog)
+ * Contains:
+ *  - StoreIdentityForm  (store name + URL slug)
+ *  - WhatsappForm       (store contact number visible on the public catalog)
  *
  * Server Component — data is pre-fetched by page.tsx and passed as props.
  */
 
 import { WhatsappForm } from "./WhatsappForm";
+import { StoreIdentityForm } from "./StoreIdentityForm";
 import { CollapsibleSettingsGroup } from "./CollapsibleSettingsGroup";
 
 interface StoreInfoSettingsProps {
   currentWhatsapp: string | null;
+  storeName: string;
+  storeSlug: string;
 }
 
-export function StoreInfoSettings({ currentWhatsapp }: StoreInfoSettingsProps) {
+export function StoreInfoSettings({
+  currentWhatsapp,
+  storeName,
+  storeSlug,
+}: StoreInfoSettingsProps) {
   return (
     <CollapsibleSettingsGroup
       title="Informações da Loja"
       description="Dados de contato usados no catálogo público e na comunicação com clientes."
       icon={<StoreIcon className="h-4 w-4" />}
     >
+      <StoreIdentityForm initialName={storeName} initialSlug={storeSlug} />
+      <hr className="border-line" />
       <WhatsappForm initialWhatsapp={currentWhatsapp} />
     </CollapsibleSettingsGroup>
   );

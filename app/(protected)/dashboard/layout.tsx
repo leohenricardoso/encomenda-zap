@@ -25,13 +25,18 @@ export default async function DashboardLayout({
 }) {
   const session = await getSession();
 
-  // Fetch store name — storeId is always valid here (verified by parent layout)
+  // Fetch store identity — storeId is always valid here (verified by parent layout)
   const store = await prisma.store.findUnique({
     where: { id: session.storeId },
-    select: { name: true },
+    select: { name: true, slug: true },
   });
 
   return (
-    <AppShell storeName={store?.name ?? "Minha Loja"}>{children}</AppShell>
+    <AppShell
+      storeName={store?.name ?? "Minha Loja"}
+      storeSlug={store?.slug ?? undefined}
+    >
+      {children}
+    </AppShell>
   );
 }

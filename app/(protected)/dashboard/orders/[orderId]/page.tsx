@@ -108,7 +108,12 @@ export default async function OrderDetailPage({ params }: Props) {
               <OrderItemsCard items={order.items} />
 
               {/* 3. Customer notes — highlighted only when present */}
-              {order.notes && <OrderNotesCard notes={order.notes} waUrl={observationWaUrl ?? undefined} />}
+              {order.notes && (
+                <OrderNotesCard
+                  notes={order.notes}
+                  waUrl={observationWaUrl ?? undefined}
+                />
+              )}
             </div>
 
             {/* ══ Sidebar ══════════════════════════════════════════════════ */}

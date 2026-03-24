@@ -71,8 +71,8 @@ export function Header({
         <MenuIcon />
       </button>
 
-      {/* ── Store name — shown on mobile only (sidebar hidden) ──────────── */}
-      <p className="lg:hidden text-sm font-semibold text-foreground truncate">
+      {/* ── Store name ─────────────────────────────────────────────────── */}
+      <p className="text-sm font-semibold text-foreground truncate">
         {storeName}
       </p>
 

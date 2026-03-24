@@ -107,6 +107,8 @@ import { GetCategoryProductsUseCase } from "@/application/category/GetCategoryPr
 import { GetProductCategoryIdsUseCase } from "@/application/category/GetProductCategoryIdsUseCase";
 import { GetDailyProductionUseCase } from "@/application/production/GetDailyProductionUseCase";
 import { ToggleChecklistItemUseCase } from "@/application/production/ToggleChecklistItemUseCase";
+import { GetStoreIdentityUseCase } from "@/application/store/GetStoreIdentityUseCase";
+import { UpdateStoreIdentityUseCase } from "@/application/store/UpdateStoreIdentityUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -413,4 +415,11 @@ const toggleChecklistItemUseCase = new ToggleChecklistItemUseCase(
 
 export const dailyProductionController = new DailyProductionController(
   toggleChecklistItemUseCase,
+);
+
+// ─── Store Identity ───────────────────────────────────────────────────────────
+
+export const getStoreIdentityUseCase = new GetStoreIdentityUseCase(storeRepo);
+export const updateStoreIdentityUseCase = new UpdateStoreIdentityUseCase(
+  storeRepo,
 );

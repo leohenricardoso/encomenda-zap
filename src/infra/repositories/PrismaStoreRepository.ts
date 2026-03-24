@@ -84,6 +84,47 @@ export class PrismaStoreRepository implements IStoreRepository {
     });
   }
 
+  async findIdentity(
+    storeId: string,
+  ): Promise<{ name: string; slug: string | null } | null> {
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { name: true, slug: true },
+    });
+    return store ?? null;
+  }
+
+  async isSlugTaken(slug: string, excludeStoreId: string): Promise<boolean> {
+    const count = await prisma.store.count({
+      where: { slug, NOT: { id: excludeStoreId } },
+    });
+    return count > 0;
+  }
+
+  async updateIdentity(
+    storeId: string,
+    name: string,
+    slug: string,
+  ): Promise<void> {
+    try {
+      await prisma.store.update({
+        where: { id: storeId },
+        data: { name, slug },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new AppError(
+          "Este slug já está em uso por outra loja.",
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw err;
+    }
+  }
+
   async findPickupAddress(storeId: string): Promise<StorePickupAddress | null> {
     const store = await prisma.store.findUnique({
       where: { id: storeId },
