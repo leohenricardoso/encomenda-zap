@@ -10,10 +10,13 @@ interface Props {
   categories: StoreCatalogCategory[];
 }
 
+const SCROLL_KEY = "categoryTabsScrollLeft";
+
 export function CatalogCategoryTabs({ storeSlug, categories }: Props) {
   const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleScroll() {
@@ -29,6 +32,29 @@ export function CatalogCategoryTabs({ storeSlug, categories }: Props) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Restore scroll position after navigation
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const saved = sessionStorage.getItem(SCROLL_KEY);
+    if (saved) {
+      container.scrollLeft = Number(saved);
+    }
+  }, []);
+
+  // Persist scroll position as the user scrolls the tab bar
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    function handleContainerScroll() {
+      sessionStorage.setItem(SCROLL_KEY, String(container!.scrollLeft));
+    }
+    container.addEventListener("scroll", handleContainerScroll, {
+      passive: true,
+    });
+    return () => container.removeEventListener("scroll", handleContainerScroll);
+  }, []);
+
   if (categories.length === 0) return null;
 
   const allHref = `/catalog/${storeSlug}`;
@@ -42,7 +68,10 @@ export function CatalogCategoryTabs({ storeSlug, categories }: Props) {
         hidden ? "-translate-y-full" : "translate-y-0",
       ].join(" ")}
     >
-      <div className="mx-auto flex max-w-screen-xl gap-1 overflow-x-auto px-4 py-2 sm:px-6 lg:px-8">
+      <div
+        ref={scrollContainerRef}
+        className="mx-auto flex max-w-screen-xl gap-1 overflow-x-auto px-4 py-2 sm:px-6 lg:px-8"
+      >
         <Link
           href={allHref}
           className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
