@@ -58,6 +58,20 @@ export interface IStoreRepository {
   /** Persists a new WhatsApp number for the store. */
   updateWhatsapp(storeId: string, whatsapp: string): Promise<void>;
 
+  /** Returns the store's name and slug, or null if not found. */
+  findIdentity(
+    storeId: string,
+  ): Promise<{ name: string; slug: string | null } | null>;
+
+  /**
+   * Returns true when the given slug is already used by any store OTHER than
+   * excludeStoreId. Used for real-time availability checks in the settings form.
+   */
+  isSlugTaken(slug: string, excludeStoreId: string): Promise<boolean>;
+
+  /** Persists a new name and slug for the store. */
+  updateIdentity(storeId: string, name: string, slug: string): Promise<void>;
+
   /** Returns the store's configured pickup address, or null when not set. */
   findPickupAddress(storeId: string): Promise<StorePickupAddress | null>;
 

@@ -44,6 +44,7 @@ import { PrismaStoreMessageRepository } from "@/infra/repositories/PrismaStoreMe
 import { PrismaProductImageRepository } from "@/infra/repositories/PrismaProductImageRepository";
 import { PrismaCategoryRepository } from "@/infra/repositories/PrismaCategoryRepository";
 import { PrismaProductCategoryRepository } from "@/infra/repositories/PrismaProductCategoryRepository";
+import { PrismaDailyProductionChecklistRepository } from "@/infra/repositories/PrismaDailyProductionChecklistRepository";
 
 // ─── Application ─────────────────────────────────────────────────────────────
 
@@ -104,6 +105,11 @@ import { RemoveProductFromCategoryUseCase } from "@/application/category/RemoveP
 import { ReorderCategoryProductsUseCase } from "@/application/category/ReorderCategoryProductsUseCase";
 import { GetCategoryProductsUseCase } from "@/application/category/GetCategoryProductsUseCase";
 import { GetProductCategoryIdsUseCase } from "@/application/category/GetProductCategoryIdsUseCase";
+import { UpdateCategoryOrderUseCase } from "@/application/category/UpdateCategoryOrderUseCase";
+import { GetDailyProductionUseCase } from "@/application/production/GetDailyProductionUseCase";
+import { ToggleChecklistItemUseCase } from "@/application/production/ToggleChecklistItemUseCase";
+import { GetStoreIdentityUseCase } from "@/application/store/GetStoreIdentityUseCase";
+import { UpdateStoreIdentityUseCase } from "@/application/store/UpdateStoreIdentityUseCase";
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
@@ -120,6 +126,7 @@ import { ProductImageController } from "@/controllers/http/ProductImageControlle
 import { ProductImageUploadController } from "@/controllers/http/ProductImageUploadController";
 import { ReplaceProductImagesController } from "@/controllers/http/ReplaceProductImagesController";
 import { CategoryController } from "@/controllers/http/CategoryController";
+import { DailyProductionController } from "@/controllers/http/DailyProductionController";
 
 // ─── Wire-up ─────────────────────────────────────────────────────────────────
 // Module-level singletons — Next.js server restarts on code changes,
@@ -140,6 +147,8 @@ const cepRangeRepo = new PrismaCepRangeRepository();
 const imageRepo = new PrismaProductImageRepository();
 const categoryRepo = new PrismaCategoryRepository();
 const productCategoryRepo = new PrismaProductCategoryRepository();
+const dailyProductionChecklistRepo =
+  new PrismaDailyProductionChecklistRepository();
 
 const loginUseCase = new LoginUseCase(adminRepo, hasher);
 const registerStoreUseCase = new RegisterStoreUseCase(storeRepo, hasher);
@@ -382,6 +391,9 @@ export const getCategoryProductsUseCase = new GetCategoryProductsUseCase(
 export const getProductCategoryIdsUseCase = new GetProductCategoryIdsUseCase(
   productCategoryRepo,
 );
+export const updateCategoryOrderUseCase = new UpdateCategoryOrderUseCase(
+  categoryRepo,
+);
 
 export const categoryController = new CategoryController(
   listCategoriesUseCase,
@@ -392,4 +404,27 @@ export const categoryController = new CategoryController(
   removeProductFromCategoryUseCase,
   reorderCategoryProductsUseCase,
   getCategoryProductsUseCase,
+  updateCategoryOrderUseCase,
+);
+
+// ─── Daily Production ─────────────────────────────────────────────────────────────────
+
+export const getDailyProductionUseCase = new GetDailyProductionUseCase(
+  orderRepo,
+  dailyProductionChecklistRepo,
+);
+
+const toggleChecklistItemUseCase = new ToggleChecklistItemUseCase(
+  dailyProductionChecklistRepo,
+);
+
+export const dailyProductionController = new DailyProductionController(
+  toggleChecklistItemUseCase,
+);
+
+// ─── Store Identity ───────────────────────────────────────────────────────────
+
+export const getStoreIdentityUseCase = new GetStoreIdentityUseCase(storeRepo);
+export const updateStoreIdentityUseCase = new UpdateStoreIdentityUseCase(
+  storeRepo,
 );

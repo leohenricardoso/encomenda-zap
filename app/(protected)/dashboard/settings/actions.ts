@@ -5,6 +5,8 @@ import {
   updateStoreWhatsappUseCase,
   updateStorePickupAddressUseCase,
   updateDefaultDeliveryFeeUseCase,
+  updateStoreIdentityUseCase,
+  storeRepo,
 } from "@/infra/composition";
 import { AppError } from "@/shared/errors/AppError";
 import type { UpdatePickupAddressInput } from "@/application/store/UpdateStorePickupAddressUseCase";
@@ -70,5 +72,42 @@ export async function saveDefaultDeliveryFee(
         ? err.message
         : "Não foi possível salvar. Tente novamente.";
     return { success: false, error: message };
+  }
+}
+
+// ─── Store identity (name + slug) ─────────────────────────────────────────────
+
+export type SaveStoreIdentityResult =
+  | { success: true }
+  | { success: false; error: string };
+
+export async function saveStoreIdentity(
+  name: string,
+  slug: string,
+): Promise<SaveStoreIdentityResult> {
+  try {
+    const session = await getSession();
+    await updateStoreIdentityUseCase.execute(session.storeId, { name, slug });
+    return { success: true };
+  } catch (err) {
+    const message =
+      err instanceof AppError
+        ? err.message
+        : "Não foi possível salvar. Tente novamente.";
+    return { success: false, error: message };
+  }
+}
+
+export type CheckSlugResult = { available: boolean };
+
+export async function checkSlugAvailability(
+  slug: string,
+): Promise<CheckSlugResult> {
+  try {
+    const session = await getSession();
+    const taken = await storeRepo.isSlugTaken(slug, session.storeId);
+    return { available: !taken };
+  } catch {
+    return { available: false };
   }
 }

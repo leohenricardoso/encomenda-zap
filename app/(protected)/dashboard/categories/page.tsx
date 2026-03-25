@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 import { getSession } from "@/infra/http/auth/getSession";
 import { listCategoriesUseCase } from "@/infra/composition";
 import { PageHeader } from "../_components/PageHeader";
-import { CategoriesTable } from "./_components/CategoriesTable";
+import { SortableCategoriesList } from "./_components/SortableCategoriesList";
 
 export const metadata: Metadata = { title: "Categorias" };
 
@@ -46,7 +46,7 @@ export default async function CategoriesPage() {
       />
 
       <div className="p-6 md:p-8">
-        <CategoriesTable categories={categories} />
+        <SortableCategoriesList categories={categories} />
       </div>
     </div>
   );

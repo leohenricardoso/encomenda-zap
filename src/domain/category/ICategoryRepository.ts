@@ -41,4 +41,13 @@ export interface ICategoryRepository {
 
   /** Returns the current maximum position value for a store's categories. */
   maxPosition(storeId: string): Promise<number>;
+
+  /**
+   * Batch-update the position of multiple categories in one transaction.
+   * Only categories belonging to `storeId` are affected (tenant-safe).
+   */
+  reorderCategories(
+    storeId: string,
+    items: { id: string; position: number }[],
+  ): Promise<void>;
 }
