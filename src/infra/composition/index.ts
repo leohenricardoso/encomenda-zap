@@ -105,6 +105,7 @@ import { RemoveProductFromCategoryUseCase } from "@/application/category/RemoveP
 import { ReorderCategoryProductsUseCase } from "@/application/category/ReorderCategoryProductsUseCase";
 import { GetCategoryProductsUseCase } from "@/application/category/GetCategoryProductsUseCase";
 import { GetProductCategoryIdsUseCase } from "@/application/category/GetProductCategoryIdsUseCase";
+import { UpdateCategoryOrderUseCase } from "@/application/category/UpdateCategoryOrderUseCase";
 import { GetDailyProductionUseCase } from "@/application/production/GetDailyProductionUseCase";
 import { ToggleChecklistItemUseCase } from "@/application/production/ToggleChecklistItemUseCase";
 import { GetStoreIdentityUseCase } from "@/application/store/GetStoreIdentityUseCase";
@@ -390,6 +391,9 @@ export const getCategoryProductsUseCase = new GetCategoryProductsUseCase(
 export const getProductCategoryIdsUseCase = new GetProductCategoryIdsUseCase(
   productCategoryRepo,
 );
+export const updateCategoryOrderUseCase = new UpdateCategoryOrderUseCase(
+  categoryRepo,
+);
 
 export const categoryController = new CategoryController(
   listCategoriesUseCase,
@@ -400,6 +404,7 @@ export const categoryController = new CategoryController(
   removeProductFromCategoryUseCase,
   reorderCategoryProductsUseCase,
   getCategoryProductsUseCase,
+  updateCategoryOrderUseCase,
 );
 
 // ─── Daily Production ─────────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ import type { AssignProductToCategoryUseCase } from "@/application/category/Assi
 import type { RemoveProductFromCategoryUseCase } from "@/application/category/RemoveProductFromCategoryUseCase";
 import type { ReorderCategoryProductsUseCase } from "@/application/category/ReorderCategoryProductsUseCase";
 import type { GetCategoryProductsUseCase } from "@/application/category/GetCategoryProductsUseCase";
+import type { UpdateCategoryOrderUseCase } from "@/application/category/UpdateCategoryOrderUseCase";
 
 export class CategoryController {
   constructor(
@@ -24,6 +25,7 @@ export class CategoryController {
     private readonly removeProductFromCategoryUseCase: RemoveProductFromCategoryUseCase,
     private readonly reorderCategoryProductsUseCase: ReorderCategoryProductsUseCase,
     private readonly getCategoryProductsUseCase: GetCategoryProductsUseCase,
+    private readonly updateCategoryOrderUseCase: UpdateCategoryOrderUseCase,
   ) {}
 
   // ─── GET /api/categories ────────────────────────────────────────────────────
@@ -197,6 +199,35 @@ export class CategoryController {
           categoryId,
           req.session.storeId,
           Array.isArray(orderedProductIds) ? orderedProductIds.map(String) : [],
+        );
+        return noContent();
+      } catch (err) {
+        return errorResponse(
+          err instanceof AppError ? err : new AppError("Unexpected error."),
+        );
+      }
+    },
+  );
+
+  // ─── PATCH /api/categories/reorder ───────────────────────────────────────────
+
+  readonly reorderCategories = withAuth(
+    async (req: AuthenticatedRequest): Promise<NextResponse> => {
+      const body = await this.parseJsonBody(req);
+      const { items } = body;
+      try {
+        const parsed = Array.isArray(items)
+          ? items.map((i: unknown) => {
+              const item = i as Record<string, unknown>;
+              return {
+                id: String(item.id ?? ""),
+                position: Number(item.position ?? 0),
+              };
+            })
+          : [];
+        await this.updateCategoryOrderUseCase.execute(
+          req.session.storeId,
+          parsed,
         );
         return noContent();
       } catch (err) {

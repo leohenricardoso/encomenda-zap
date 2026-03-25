@@ -106,4 +106,18 @@ export class PrismaCategoryRepository implements ICategoryRepository {
     });
     return result._max.position ?? 0;
   }
+
+  async reorderCategories(
+    storeId: string,
+    items: { id: string; position: number }[],
+  ): Promise<void> {
+    await prisma.$transaction(
+      items.map(({ id, position }) =>
+        prisma.category.updateMany({
+          where: { id, storeId },
+          data: { position },
+        }),
+      ),
+    );
+  }
 }

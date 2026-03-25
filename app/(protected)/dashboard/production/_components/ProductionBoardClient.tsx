@@ -240,7 +240,9 @@ export function ProductionBoardClient({
                 : "border-line bg-surface text-foreground hover:border-line"
             }`}
           >
-            {includesPending ? "Incluindo pendentes" : "Incluir pendentes"}
+            {includesPending
+              ? "Incluindo pedidos não aprovados"
+              : "Incluir pedidos não aprovados"}
           </button>
           <button
             onClick={() => window.print()}
